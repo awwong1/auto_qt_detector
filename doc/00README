@@ -1,0 +1,47 @@
+Yuriy Chesnokov
+ 
+lib.cpp, lib.h is the unicode C++ classes for the annotation,
+denoising of the ECG data, CWT and FWT transforms.  ecg.rar is the
+compliable VC++ 7.0 console project including these libraries.
+ 
+The description is how to use these classes is at the end of every
+class definition in the lib.h file (except for CWT and FWT which needs
+to be described in more detail). I will do it in the course of the
+next days, but to a programmer it is very easy to see how to use them
+from Denoise and Annotation classes.
+ 
+I believe you'd like to produce console applications for the usage of
+these classes.  I originally developed them under Builder C++ project
+which include GUI for data loading visualization etc... and use them
+in this project.
+ 
+The lib is currently in unicode version so if you are going to compile
+it under gcc and it does not allow it I can produce multibyte
+version. This was done intentionally since I had the trouble of
+running my executable during my interview in Samsung company on korean
+windows (though they anyway offered me a contract seeing my
+project). So it must be capable now to load ECG filenames in chinese
+characters.
+ 
+So try to compile it under gcc, this should work, as I did compiled
+under VC++ 7.0 some C++ classes developed and compiled under gcc, so
+the vice versa should work also. But if you have VC studio 2003 this
+should run without problems so you can experiment with annotation.
+ 
+By the way you can change the names of the lib to say something like
+ecglib.cpp or something if you like
+ 
+P.S. the program is being developed during last couple of years so it
+bug free I run it many times on 24h recordings without an exception
+failure.
+
+-------------------------------------------------------------------------------
+Update 17 May 2007
+
+Yuriy has provided ecg-vc8.rar, an update of ecg.rar for VC++ 8.0 and VC
+studio 2005.  He writes:
+
+   [This version] includes main function in the ecg.cpp with the code
+   to produce annotation to console stdout and save HRV data to rrs.txt.
+
+
