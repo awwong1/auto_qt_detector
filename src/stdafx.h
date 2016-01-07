@@ -8,12 +8,20 @@
 
 
 #include <iostream>
-#include <tchar.h>
+//#include <fstream>
+
+// #define STDC_WANT_LIB_EXT1 1
 
 // TODO: reference additional headers your program requires here
-#include <windows.h>
+//#include <sys/mman.h>
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
+//#include <string.h>
+//#include <wchar.h>
+#include <stdlib.h>
+// #include <fcntl.h>
+// #include <unistd.h>
 
 #include <vector>
 using namespace std;
@@ -30,3 +38,21 @@ static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB"
           //user defined beats//
                                       L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",
                                       L"r",      L"R",       L"s",       L"S"};
+
+typedef void *LPVOID;
+typedef void *PVOID;
+typedef PVOID HANDLE;
+
+#define _MAX_PATH PATH_MAX
+
+// typedef union _LARGE_INTEGER {
+//   struct {
+//     DWORD LowPart;
+//     LONG  HighPart;
+//   };
+//   struct {
+//     DWORD LowPart;
+//     LONG  HighPart;
+//   } u;
+//   LONGLONG QuadPart;
+// } LARGE_INTEGER, *PLARGE_INTEGER;

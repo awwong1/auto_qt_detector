@@ -97,5 +97,5 @@ int FWT::GetJ() const
         return J;
 }
 
-#endif FWT_h
+#endif //FWT_h
 

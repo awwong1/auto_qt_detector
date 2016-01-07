@@ -207,5 +207,5 @@ inline int CWT::GetScaleType() const
         return ScaleType;
 }
 
-#endif CWT_h
+#endif // CWT_h
 

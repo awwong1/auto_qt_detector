@@ -290,5 +290,5 @@ inline int EcgAnnotation::Finds(const double *data, int size, double err) const 
         return -1;
 }
 
-#endif Annotation_h
+#endif // Annotation_h
 

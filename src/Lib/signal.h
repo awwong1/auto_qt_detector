@@ -8,7 +8,7 @@
 using namespace std;
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <windows.h>
+//#include <windows.h>
 
 typedef struct _datahdr {
         char hdr[4];
@@ -189,5 +189,5 @@ inline double Signal::log2(double x) const
         return log(x) / log(2.0);
 }
 
-#endif Signal_h
+#endif // Signal_h
 

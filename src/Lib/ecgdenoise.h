@@ -57,5 +57,5 @@ private:
 // Inlines
 
 
-#endif ECGDenosie_h
+#endif // ECGDenosie_h
 

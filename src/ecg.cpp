@@ -26,17 +26,23 @@ University Chemical Laboratory, Cambridge University, Lensfield Road, Cambridge,
 
 
 #include "stdafx.h"
-#include "lib\lib.h"
+#include "Lib/lib.h"
+#include <cstring>
+// #include <stdio.h>
+// #include <string>
+// #include <sstream>
+// #include <iomanip>
 
 wchar_t params[_MAX_PATH] = L"params";
+//char params[_MAX_PATH] = "params";
 
-void tic();
-void toc();
+// void tic();
+// void toc();
 void help();
 int parse_params(class EcgAnnotation &ann);
 void change_extension(wchar_t* path, const wchar_t* ext);
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])  // no unicode args
 {
         wchar_t annName[_MAX_PATH];
         wchar_t hrvName[_MAX_PATH];
@@ -46,7 +52,8 @@ int _tmain(int argc, _TCHAR* argv[])
         } else {
                 int leadNumber = 0;
                 if (argc >= 2 + 1) {
-                        leadNumber = _wtoi(argv[2]) - 1;
+		  wchar_t *end;  // NULL
+		  leadNumber = wcstol( (const wchar_t*)argv[2], &end, 10 ) - 1;
                         if (leadNumber < 0) leadNumber = 0;
                 }                
 
@@ -70,35 +77,36 @@ int _tmain(int argc, _TCHAR* argv[])
                         
                         class EcgAnnotation ann;  //default annotation params
                         if (argc >= 3 + 1) {
-                                wcscpy_s(params, _MAX_PATH, argv[3]);
-                                parse_params(ann);
+			  //wcscpy_s(params, _MAX_PATH, argv[3]);
+			  wcscpy(params, (const wchar_t*)argv[3] );
+			  parse_params(ann);
                         }                                                
 
 
                         wprintf(L" getting QRS complexes... ");
-                        tic();
-                        int** qrsAnn = ann.GetQRS(data, size, sr, L"filters");         //get QRS complexes                        
+                        //tic();
+                        int** qrsAnn = ann.GetQRS(data, size, sr, (wchar_t*)L"filters");         //get QRS complexes                        
                         if (qrsAnn) {
                                 wprintf(L" %d beats.\n", ann.GetQrsNumber());
                                 ann.GetEctopics(qrsAnn, ann.GetQrsNumber(), sr);        //label Ectopic beats
 
                                 wprintf(L" getting P, T waves... ");
                                 int annNum = 0;
-                                int** ANN = ann.GetPTU(data, size, sr, L"filters", qrsAnn, ann.GetQrsNumber());     //find P,T waves
+                                int** ANN = ann.GetPTU(data, size, sr, (wchar_t*)L"filters", qrsAnn, ann.GetQrsNumber());     //find P,T waves
                                 if (ANN) {
                                         annNum = ann.GetEcgAnnotationSize();
                                         wprintf(L" done.\n");
-                                        toc();
+                                        //toc();
                                         wprintf(L"\n");
                                         //save ECG annotation
-                                        wcscpy(annName, argv[1]);
+                                        wcscpy( annName, (const wchar_t*)argv[1] );
                                         change_extension(annName, L".atr");
                                         ann.SaveAnnotation(annName, ANN, annNum);
                                 } else {
                                         ANN = qrsAnn;
                                         annNum = 2 * ann.GetQrsNumber();
                                         wprintf(L" failed.\n");
-                                        toc();
+                                        //toc();
                                         wprintf(L"\n");
                                 }
                                 
@@ -117,10 +125,10 @@ int _tmain(int argc, _TCHAR* argv[])
                                 vector<double> rrs;
                                 vector<int> rrsPos;
 
-                                wcscpy(hrvName, argv[1]);
+                                wcscpy( hrvName, (const wchar_t*)argv[1] );
                                 change_extension(hrvName, L".hrv");
                                 if (ann.GetRRseq(ANN, annNum, sr, &rrs, &rrsPos)) {
-                                        FILE *fp = _wfopen(hrvName, L"wt");
+				  FILE *fp = fopen((const char*)hrvName, "wt");  // no unicode
                                         for (int i = 0; i < (int)rrs.size(); i++)
                                                 fwprintf(fp, L"%lf\n", rrs[i]);
                                         fclose(fp);
@@ -149,24 +157,24 @@ void help()
         wprintf(L"       do not forget about \\filters dir to be present.");
 }
 
-static LARGE_INTEGER m_nFreq;
-static LARGE_INTEGER m_nBeginTime;
+// static LARGE_INTEGER m_nFreq;
+// static LARGE_INTEGER m_nBeginTime;
 
-void tic()
-{
-        QueryPerformanceFrequency(&m_nFreq);
-        QueryPerformanceCounter(&m_nBeginTime);
-}
-void toc()
-{
-        LARGE_INTEGER nEndTime;
-        __int64 nCalcTime;
+// void tic()
+// {
+//         QueryPerformanceFrequency(&m_nFreq);
+//         QueryPerformanceCounter(&m_nBeginTime);
+// }
+// void toc()
+// {
+//         LARGE_INTEGER nEndTime;
+//         __int64 nCalcTime;
 
-        QueryPerformanceCounter(&nEndTime);
-        nCalcTime = (nEndTime.QuadPart - m_nBeginTime.QuadPart) * 1000 / m_nFreq.QuadPart;
+//         QueryPerformanceCounter(&nEndTime);
+//         nCalcTime = (nEndTime.QuadPart - m_nBeginTime.QuadPart) * 1000 / m_nFreq.QuadPart;
 
-        wprintf(L" processing time: %d ms\n", nCalcTime);
-}
+//         wprintf(L" processing time: %d ms\n", nCalcTime);
+// }
 
 void change_extension(wchar_t* path, const wchar_t* ext)
 {
@@ -182,7 +190,7 @@ void change_extension(wchar_t* path, const wchar_t* ext)
 
 int parse_params(class EcgAnnotation &ann)
 {
-        FILE* fp = _wfopen(params, L"rt");
+  FILE* fp = fopen((const char*)params, "rt");  // no unicode
         if (fp != 0) {
                 ANNHDR hdr;
                 int res = 0;
@@ -196,7 +204,7 @@ int parse_params(class EcgAnnotation &ann)
                                    &hdr.pFreq, &hdr.tFreq, &hdr.biTwave);
                 if (res == 14) {
                         PANNHDR phdr = ann.GetAnnotationHeader();
-                        memcpy(phdr, &hdr, sizeof(ANNHDR));
+			memcpy(phdr, &hdr, sizeof(ANNHDR));
                         wprintf(L" using annotation params from file %s\n", params);
                         wprintf(L"  minBpm  %d\n"  
                                 L"  maxBpm  %d\n" 
