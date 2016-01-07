@@ -27,7 +27,8 @@ FWT::~FWT()
 
 bool FWT::InitFWT(const wchar_t* fltname, const double* data, int size)
 {
-        filter = _wfopen(fltname, L"rt");
+        // filter = _wfopen(fltname, L"rt");
+        filter = fopen( (const char*)fltname, "rt" );  // no unicode
         if (filter) {
                 tH = LoadFilter(thL, thZ);
                 tG = LoadFilter(tgL, tgZ);

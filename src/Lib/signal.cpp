@@ -149,7 +149,8 @@ bool Signal::ReadTxtFile()
         double tmp;
         int res;
 
-        if ((in = _wfopen(EcgFileName, L"rt")) == 0)
+        // if ((in = _wfopen(EcgFileName, L"rt")) == 0)
+        if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode
                 return false;
 
         for (;;) {
@@ -186,7 +187,8 @@ bool Signal::ReadMitbihFile()
         wcscpy(HeaFile, EcgFileName);
 
         ChangeExtension(HeaFile, L".hea");
-        FILE* fh = _wfopen(HeaFile, L"rt");
+        // FILE* fh = _wfopen(HeaFile, L"rt");
+        FILE* fh = fopen( (const char*)HeaFile, "rt" );  // no unicode
         if (!fh) 
                 return false;
 
@@ -438,8 +440,8 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
 
 bool Signal::ToTxt(const wchar_t* name, const double* buffer, int size)
 {
-        in = _wfopen(name, L"wt");
-
+        // in = _wfopen(name, L"wt");
+        in = fopen( (const char*)name, "wt" );  // no unicode
         if (in) {
                 for (int i = 0; i < size; i++)
                         fwprintf(in, L"%lf\n", buffer[i]);
