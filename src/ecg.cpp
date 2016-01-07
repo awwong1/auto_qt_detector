@@ -28,9 +28,12 @@ University Chemical Laboratory, Cambridge University, Lensfield Road, Cambridge,
 #include "stdafx.h"
 #include "lib\lib.h"
 
+wchar_t params[_MAX_PATH] = L"params";
+
 void tic();
 void toc();
 void help();
+int parse_params(class EcgAnnotation &ann);
 void change_extension(wchar_t* path, const wchar_t* ext);
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -42,10 +45,10 @@ int _tmain(int argc, _TCHAR* argv[])
                 help();
         } else {
                 int leadNumber = 0;
-                if (argc == 2 + 1) {
+                if (argc >= 2 + 1) {
                         leadNumber = _wtoi(argv[2]) - 1;
                         if (leadNumber < 0) leadNumber = 0;
-                }
+                }                
 
                 class Signal signal;
                 if (signal.ReadFile(argv[1])) {
@@ -64,14 +67,12 @@ int _tmain(int argc, _TCHAR* argv[])
                         
                         double* data = signal.GetData(leadNumber);
 
-                        //annotation
+                        
                         class EcgAnnotation ann;  //default annotation params
-
-                        //or add your custom ECG params to annotation class from lib.h
-                        // ANNHDR hdr;
-                        //  hdr.minbpm = 30;
-                        //  etc...
-                        // class EcgAnnotation ann( &hdr );
+                        if (argc >= 3 + 1) {
+                                wcscpy_s(params, _MAX_PATH, argv[3]);
+                                parse_params(ann);
+                        }                                                
 
 
                         wprintf(L" getting QRS complexes... ");
@@ -130,12 +131,12 @@ int _tmain(int argc, _TCHAR* argv[])
                                 }
 
                         } else {
-                                wprintf(L"could not get QRS complexes. make sure you have got \"filters\" directory in the ecg application dir.");
+                                wprintf(L" could not get QRS complexes. make sure you have got \"filters\" directory in the ecg application dir.");
                                 exit(1);
                         }
 
                 } else {
-                        wprintf(L"failed to read %s file", argv[1]);
+                        wprintf(L" failed to read %s file", argv[1]);
                         exit(1);
                 }
 
@@ -146,7 +147,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 void help()
 {
-        wprintf(L"usage: ecg.exe physionetfile.dat [LeadNumber]\n");
+        wprintf(L"usage: ecg.exe physionetfile.dat [LeadNumber] [params]\n");
         wprintf(L"       do not forget about \\filters dir to be present.");
 }
 
@@ -179,4 +180,52 @@ void change_extension(wchar_t* path, const wchar_t* ext)
                 }
         }
         wcscat(path, ext);
+}
+
+int parse_params(class EcgAnnotation &ann)
+{
+        FILE* fp = _wfopen(params, L"rt");
+        if (fp != 0) {
+                ANNHDR hdr;
+                int res = 0;
+                res = fwscanf(fp, L"%*s %d %*s %d"
+                                  L"%*s %lf %*s %lf %*s %lf"
+                                  L"%*s %lf %*s %lf %*s %lf %*s %lf"
+                                  L"%*s %lf %*s %lf %*s %d",  
+                                   &hdr.minbpm, &hdr.maxbpm,
+                                   &hdr.minQRS, &hdr.maxQRS, &hdr.minUmV,
+                                   &hdr.minPQ, &hdr.maxPQ, &hdr.minQT, &hdr.maxQT, 
+                                   &hdr.pFreq, &hdr.tFreq, &hdr.biTwave);
+                if (res == 12) {
+                        PANNHDR phdr = ann.GetAnnotationHeader();
+                        memcpy(phdr, &hdr, sizeof(ANNHDR));
+                        wprintf(L" using annotation params from file %s\n", params);
+                        wprintf(L"  minBpm  %d\n"  
+                                L"  maxBpm  %d\n" 
+                                L"  minQRS  %lg\n" 
+                                L"  maxQRS  %lg\n" 
+                                L"  minUmV  %lg\n"
+                                L"   minPQ  %lg\n"
+                                L"   maxPQ  %lg\n" 
+                                L"   minQT  %1f\n" 
+                                L"   maxQT  %lg\n" 
+                                L"   pFreq  %lg\n"  
+                                L"   tFreq  %lg\n"
+                                L" biTwave  %d\n\n", hdr.minbpm, hdr.maxbpm,
+                                                   hdr.minQRS, hdr.maxQRS, hdr.minUmV,
+                                                   hdr.minPQ, hdr.maxPQ, hdr.minQT, hdr.maxQT, 
+                                                   hdr.pFreq, hdr.tFreq, hdr.biTwave);
+                        fclose(fp);
+                        return 0;
+                }
+                else {
+                        fclose(fp);
+                        wprintf(L" failed to read %s annotation params file, using default ones instead.\n", params);
+                        return res;                                
+                }
+        }
+        else {
+                wprintf(L" failed to open %s annotation params file, using default ones instead.\n", params);
+                return -1;
+        }
 }

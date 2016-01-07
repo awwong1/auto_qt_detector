@@ -24,6 +24,7 @@ typedef struct _annhdr {
         double maxQT;
         double pFreq;   //p wave freq for CWT
         double tFreq;   //t wave freq for CWT
+        int biTwave;    //biphasic T wave - 1, normal - 0
 } ANNHDR, *PANNHDR;
 
 class Signal;
@@ -35,6 +36,8 @@ public:
         //EcgAnnotation(const EcgAnnotation& annotation);
         ~EcgAnnotation();
 
+// Data
+        enum WAVETYPE {NORMAL, BIPHASE};
 // Operators
         //const EcgAnnotation& operator=(const EcgAnnotation& annotation);
 

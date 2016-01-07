@@ -25,6 +25,7 @@ EcgAnnotation::EcgAnnotation(PANNHDR p): qrsNum(0), annNum(0), auxNum(0),
                 ahdr.maxQT = 0.48;    //max QT duration
                 ahdr.pFreq = 9.0;     //cwt Hz for P wave
                 ahdr.tFreq = 3.0;     //cwt Hz for T wave
+                ahdr.biTwave = 0;     //normal wave
         }
 }
 
@@ -377,7 +378,11 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
                 //double lvl,rvl;
                 //lvl = data[annPos+add];
                 //rvl = data[annPos+add+size-1];
-                cwt.InitCWT(size, CWT::GAUS1, 0, sr);                           //6-Gauss1 wlet
+                if (ahdr.biTwave == WAVETYPE::BIPHASE)
+                        cwt.InitCWT(size, CWT::GAUS, 0, sr);                 //5-Gauss wlet
+                else
+                        cwt.InitCWT(size, CWT::GAUS1, 0, sr);                //6-Gauss1 wlet
+
                 pspec = cwt.CwtTrans(data + annPos + add, ahdr.tFreq);//,false,lvl,rvl);   //3Hz transform  pspec = size-2*add
 
                 //cwt.ToTxt(L"debugS.txt",data+annPos+add,size);    //T wave
@@ -884,7 +889,7 @@ bool EcgAnnotation::SaveQTseq(const wchar_t *name, int **ann, int annsize, doubl
                 case 24:            //P
                 case 25:
                 case 26:
-                case 27:
+                case 27:            //T
                 case 28:
                 case 29:
                 case 30:
