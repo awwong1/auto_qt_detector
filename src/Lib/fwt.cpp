@@ -3,6 +3,7 @@
 #include "../stdafx.h"
 #include "signal.h"
 #include "fwt.h"
+#include <string.h>
 
 
 FWT::FWT(): tH(0), tG(0), H(0), G(0),

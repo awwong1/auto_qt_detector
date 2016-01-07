@@ -3,7 +3,7 @@
 #include "../stdafx.h"
 #include "signal.h"
 #include "cwt.h"
-
+#include <string.h>
 
 CWT::CWT(): ScaleType(LINEAR_SCALE), pCwtSpectrum(0), pReal(0), pImag(0)
 {
@@ -110,11 +110,15 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
 
         filesize = sizeof(float) * filesize + sizeof(CWTHDR);
 
-        fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE)
-                return 0;
+        // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE)
+        //         return 0;
+	fp = fopen( (const char*)name, "w+" );
+	if(fp == NULL) { return 0; }
+	// TODO: convert to mmap():
         fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize, 0);
         lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize);
+	// end of TODO
 
         lpf = (float *)lpMap;
 
@@ -126,11 +130,15 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
 
 float* CWT::CwtReadFile(const wchar_t *name)
 {
-        fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE)
-                return 0;
-        fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
+        // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE)
+        //         return 0;
+        fp = fopen( (const char*)name, "r" );  // TODO: set correct mode here (WRITE, READ, OPEN_EXISTING)
+	if(fp == NULL) { return 0; }
+	// TODO: convert to mmap():
+	fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
         lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
+	// end of TODO
 
         phdr = (PCWTHDR)lpMap;
         lpf = (float *)lpMap;
