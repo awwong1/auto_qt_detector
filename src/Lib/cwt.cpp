@@ -1,6 +1,6 @@
 
 
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "signal.h"
 #include "cwt.h"
 
