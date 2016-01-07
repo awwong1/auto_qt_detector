@@ -2,7 +2,7 @@
 
 #include "../stdafx.h"
 #include "signal.h"
-
+#include <string.h>
 
 Signal::Signal(): pData(0), fp(0), fpmap(0), lpMap(0),
                   SR(0.0), Bits(0), UmV(0), Lead(0), Length(0),

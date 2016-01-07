@@ -71,7 +71,7 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
                 break;
         case MORLFULL:
                 wcscat(name, L"(MComp");
-                swprintf(tmp, L"%d", (int)w);
+                swprintf( tmp, (int)w, L"%d" );
                 wcscat(name, tmp);
                 wcscat(name, L").w");
                 break;
@@ -220,7 +220,7 @@ void CWT::ConvertName(wchar_t *name, enum WAVELET wavelet, double w) const
                 break;
         case MORLFULL:
                 wcscat(name, L"(MComp");
-                swprintf(tmp, L"%d", (int)w);
+                swprintf( tmp, (int)w, L"%d" );
                 wcscat(name, tmp);
                 wcscat(name, L").w");
                 break;
