@@ -3,8 +3,6 @@
 #ifndef Annotation_h
 #define Annotation_h
 
-#define qNORM 0
-#define qNOISE 1
 
 typedef struct _annrec {
         unsigned int pos;    //offset
@@ -14,17 +12,19 @@ typedef struct _annrec {
 
 typedef struct _annhdr {
         int minbpm;
-        int maxbpm;
-        double minUmV;  //min R,S amplitude
-        double minQRS;  //min QRS duration
-        double maxQRS;  //max QRS duration
+        int maxbpm;        
+        double minQRS;          //min QRS duration
+        double maxQRS;          //max QRS duration
+        double qrsFreq;         //qrs filtration freq 13Hz default
+        int ampQRS;             //amplify QRS complex
+        double minUmV;          //min R,S amplitude
         double minPQ;
         double maxPQ;
         double minQT;
         double maxQT;
-        double pFreq;   //p wave freq for CWT
-        double tFreq;   //t wave freq for CWT
-        int biTwave;    //biphasic T wave - 1, normal - 0
+        double pFreq;           //p wave freq for CWT
+        double tFreq;           //t wave freq for CWT
+        int biTwave;            //biphasic T wave - 1, normal - 0        
 } ANNHDR, *PANNHDR;
 
 class Signal;
@@ -37,12 +37,13 @@ public:
         ~EcgAnnotation();
 
 // Data
+        enum AMPLIFYQRS {INTER1, BIOR13};
         enum WAVETYPE {NORMAL, BIPHASE};
 // Operators
         //const EcgAnnotation& operator=(const EcgAnnotation& annotation);
 
 // Operations
-        int** GetQRS(const double *data, int size, double sr, wchar_t *fltdir = 0, int stype = qNORM);        //get RR's classification
+        int** GetQRS(const double *data, int size, double sr, wchar_t *fltdir = 0);        //get RR's classification
         void GetEctopics(int **ann, int qrsnum, double sr) const;                                                   //classify ectopic beats
         int** GetPTU(const double *data, int length, double sr, wchar_t *fltdir, int **ann, int qrsnum);
         
@@ -73,7 +74,7 @@ private:
         const EcgAnnotation& operator=(const EcgAnnotation& annotation);
 
         inline bool IsNoise(const double *data, int window) const;        //check for noise in window len
-        bool Filter30hz(double *data, int size, double sr, wchar_t *fltdir, int stype) const;    //0-30Hz removal
+        bool Filter30hz(double *data, int size, double sr, wchar_t *fltdir) const;    //0-30Hz removal
 
         inline void FindRS(const double *data, int size, int &R, int &S, double err = 0.0) const;  //find RS or QR
         inline int Findr(const double *data, int size, double err = 0.0) const;  //find small r in PQ-S

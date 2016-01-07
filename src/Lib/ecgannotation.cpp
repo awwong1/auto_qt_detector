@@ -14,18 +14,20 @@ EcgAnnotation::EcgAnnotation(PANNHDR p): qrsNum(0), annNum(0), auxNum(0),
         if (p) {
                 memcpy(&ahdr, p, sizeof(ANNHDR));
         } else { //defaults
-                ahdr.minbpm = 40;     //min bpm
-                ahdr.maxbpm = 200;    //max bpm
-                ahdr.minQRS = 0.04;   //min QRS duration
-                ahdr.maxQRS = 0.2;    //max QRS duration
-                ahdr.minUmV = 0.2;    //min UmV of R,S peaks
-                ahdr.minPQ = 0.07;    //min PQ duration
-                ahdr.maxPQ = 0.20;    //max PQ duration
-                ahdr.minQT = 0.21;    //min QT duration
-                ahdr.maxQT = 0.48;    //max QT duration
-                ahdr.pFreq = 9.0;     //cwt Hz for P wave
-                ahdr.tFreq = 3.0;     //cwt Hz for T wave
-                ahdr.biTwave = 0;     //normal wave
+                ahdr.minbpm = 40;       //min bpm
+                ahdr.maxbpm = 200;      //max bpm
+                ahdr.minQRS = 0.04;     //min QRS duration
+                ahdr.maxQRS = 0.2;      //max QRS duration
+                ahdr.qrsFreq = 13.0;    //QRS filtration frequency
+                ahdr.ampQRS = INTER1;   //inter1 filter
+                ahdr.minUmV = 0.2;      //min UmV of R,S peaks
+                ahdr.minPQ = 0.07;      //min PQ duration
+                ahdr.maxPQ = 0.20;      //max PQ duration
+                ahdr.minQT = 0.21;      //min QT duration
+                ahdr.maxQT = 0.48;      //max QT duration
+                ahdr.pFreq = 9.0;       //cwt Hz for P wave
+                ahdr.tFreq = 3.0;       //cwt Hz for T wave
+                ahdr.biTwave = NORMAL;  //normal wave                
         }
 }
 
@@ -53,7 +55,7 @@ EcgAnnotation::~EcgAnnotation()
 // spectrum in cwt class
 // create qrsANN array   with qrsNum records  num of heart beats = qrsNum/2
 //
-int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fltdir, int stype)
+int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fltdir)
 {
 
         double *pdata = (double *)malloc(size * sizeof(double));
@@ -63,7 +65,7 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
 
 
         if (fltdir) {
-                if (Filter30hz(pdata, size, sr, fltdir, stype) == false) { //pdata filed with filterd signal
+                if (Filter30hz(pdata, size, sr, fltdir) == false) { //pdata filed with filterd signal
                         delete[] pdata;
                         return 0;
                 }
@@ -187,12 +189,12 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
                 return 0;
 }
 
-bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdir, int stype) const
+bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdir) const
 {
         CWT cwt;
         ///////////CWT 10Hz transform//////////////////////////////////////////
         cwt.InitCWT(size, CWT::GAUS1, 0, sr);        //gauss1 wavelet 6-index
-        double *pspec = cwt.CwtTrans(data, 13);     //10-13 Hz transform?
+        double *pspec = cwt.CwtTrans(data, ahdr.qrsFreq);      //10-13 Hz transform?
         for (int i = 0; i < size; i++)
                 data[i] = pspec[i];
         cwt.CloseCWT();
@@ -203,12 +205,13 @@ bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdi
         wchar_t flt[_MAX_PATH] = L"";
         wcscpy(flt, fltdir);
 
-        switch (stype) {
-        case qNORM:
+        switch (ahdr.ampQRS) {
+        default:
+        case INTER1:
                 wcscat(flt, L"\\inter1.flt");
                 break;
 
-        case qNOISE:
+        case BIOR13:
                 for (int i = 0; i < size; i++)  //ridges
                         data[i] *= (fabs(data[i]) / 2.0);
                 wcscat(flt, L"\\bior13.flt");
@@ -378,7 +381,7 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
                 //double lvl,rvl;
                 //lvl = data[annPos+add];
                 //rvl = data[annPos+add+size-1];
-                if (ahdr.biTwave == WAVETYPE::BIPHASE)
+                if (ahdr.biTwave == BIPHASE)
                         cwt.InitCWT(size, CWT::GAUS, 0, sr);                 //5-Gauss wlet
                 else
                         cwt.InitCWT(size, CWT::GAUS1, 0, sr);                //6-Gauss1 wlet

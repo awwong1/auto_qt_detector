@@ -77,9 +77,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
                         wprintf(L" getting QRS complexes... ");
                         tic();
-                        int** qrsAnn = ann.GetQRS(data, size, sr, L"filters");         //get QRS complexes
-                        //qrsAnn = ann->GetQRS(psig, size, SR, L"filters", qNOISE);    //get QRS complexes if signal is quite noisy
-
+                        int** qrsAnn = ann.GetQRS(data, size, sr, L"filters");         //get QRS complexes                        
                         if (qrsAnn) {
                                 wprintf(L" %d beats.\n", ann.GetQrsNumber());
                                 ann.GetEctopics(qrsAnn, ann.GetQrsNumber(), sr);        //label Ectopic beats
@@ -189,14 +187,14 @@ int parse_params(class EcgAnnotation &ann)
                 ANNHDR hdr;
                 int res = 0;
                 res = fwscanf(fp, L"%*s %d %*s %d"
-                                  L"%*s %lf %*s %lf %*s %lf"
+                                  L"%*s %lf %*s %lf %*s %lf %*s %d %*s %lf"
                                   L"%*s %lf %*s %lf %*s %lf %*s %lf"
                                   L"%*s %lf %*s %lf %*s %d",  
                                    &hdr.minbpm, &hdr.maxbpm,
-                                   &hdr.minQRS, &hdr.maxQRS, &hdr.minUmV,
+                                   &hdr.minQRS, &hdr.maxQRS, &hdr.qrsFreq, &hdr.ampQRS, &hdr.minUmV,
                                    &hdr.minPQ, &hdr.maxPQ, &hdr.minQT, &hdr.maxQT, 
                                    &hdr.pFreq, &hdr.tFreq, &hdr.biTwave);
-                if (res == 12) {
+                if (res == 14) {
                         PANNHDR phdr = ann.GetAnnotationHeader();
                         memcpy(phdr, &hdr, sizeof(ANNHDR));
                         wprintf(L" using annotation params from file %s\n", params);
@@ -204,6 +202,8 @@ int parse_params(class EcgAnnotation &ann)
                                 L"  maxBpm  %d\n" 
                                 L"  minQRS  %lg\n" 
                                 L"  maxQRS  %lg\n" 
+                                L" qrsFreq  %lg\n"
+                                L"  ampQRS  %d\n"
                                 L"  minUmV  %lg\n"
                                 L"   minPQ  %lg\n"
                                 L"   maxPQ  %lg\n" 
@@ -212,7 +212,7 @@ int parse_params(class EcgAnnotation &ann)
                                 L"   pFreq  %lg\n"  
                                 L"   tFreq  %lg\n"
                                 L" biTwave  %d\n\n", hdr.minbpm, hdr.maxbpm,
-                                                   hdr.minQRS, hdr.maxQRS, hdr.minUmV,
+                                                   hdr.minQRS, hdr.maxQRS, hdr.qrsFreq, hdr.ampQRS, hdr.minUmV,
                                                    hdr.minPQ, hdr.maxPQ, hdr.minQT, hdr.maxQT, 
                                                    hdr.pFreq, hdr.tFreq, hdr.biTwave);
                         fclose(fp);
