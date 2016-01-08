@@ -33,9 +33,11 @@ double* Signal::ReadFile(const wchar_t* name)
 {
         wcscpy(EcgFileName, name);
 
-        if (!IsFileValid(name)) 
-                return 0;
-
+        if (!IsFileValid(name)) {
+	  fprintf(stderr, "Invalid file name.\n");
+	  return 0;
+	}
+		
         if (IsBinFile) {
                 if (!ReadDatFile()) 
                         return 0;
@@ -54,8 +56,9 @@ bool Signal::IsFileValid(const wchar_t* name)
         // fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
+
         fp = fopen( (const char*)name, "r" );  // TODO: use open() instead?
-	if(fp == NULL) { return false; }
+	if(fp == NULL) { return false; }  // TODO: figure out why we're failing here
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
         // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
