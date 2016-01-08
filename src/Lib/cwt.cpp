@@ -113,13 +113,14 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-	fp = fopen( (const char*)name, "w+" );  // TODO: verify mode.  use open() instead?
+	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return 0; }
-	// TODO: convert to mmap():
-        fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize, 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize);
-	// end of TODO
 
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize, 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize);
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, filesize, (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+	
         lpf = (float *)lpMap;
 
         memset(lpMap, 0, filesize);
@@ -133,13 +134,14 @@ float* CWT::CwtReadFile(const wchar_t *name)
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-        fp = fopen( (const char*)name, "r" );  // TODO: set correct mode here (WRITE, READ, OPEN_EXISTING).  use open() instead?
+        fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
 	if(fp == NULL) { return 0; }
-	// TODO: convert to mmap():
-	fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
-	// end of TODO
 
+	// fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, 0, (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+	
         phdr = (PCWTHDR)lpMap;
         lpf = (float *)lpMap;
 

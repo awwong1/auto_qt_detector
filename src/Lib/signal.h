@@ -41,7 +41,7 @@ public:
         bool SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr);
         bool SaveFile(const char* name, const double* buffer, PDATAHDR hdr);
         bool ToTxt(const wchar_t* name, const double* buffer, int size);
-        void CloseFile();
+        void CloseFile(int sizeof_lpmap);
         void mSecToTime(int msec, int& h, int& m, int& s, int& ms) const;
         void MinMax(const double* buffer, int size, double& min, double& max) const;
 
@@ -89,7 +89,8 @@ protected:
         int Lead, UmV, Bits, Length;
         int hh, mm, ss;                //start time of the record
 
-        HANDLE fp, fpmap;
+        FILE* fp;
+	HANDLE fpmap;
         LPVOID lpMap;
 
         FILE* in;

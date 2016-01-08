@@ -51,12 +51,17 @@ double* Signal::ReadFile(const wchar_t* name)
 
 bool Signal::IsFileValid(const wchar_t* name)
 {
-        fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE)
-                return false;
-        fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
+        // fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE)
+        //         return false;
+        fp = fopen( (const char*)name, "r" );  // TODO: use open() instead?
+	if(fp == NULL) { return false; }
 
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, sizeof(DATAHDR), PROT_READ, MAP_SHARED, fp_int, 0);
+	
         pEcgHeader = (PDATAHDR)lpMap;
 
         if (lpMap != 0 && !memcmp(pEcgHeader->hdr, "DATA", 4)) {
@@ -72,7 +77,7 @@ bool Signal::IsFileValid(const wchar_t* name)
         } else
                 IsBinFile = false;
 
-        CloseFile();
+        CloseFile(sizeof(DATAHDR));
         return true;
 }
 
@@ -80,13 +85,20 @@ bool Signal::ReadDatFile()
 {
         short tmp;
 
-        fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE)
-                return false;
-        fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
-        if (lpMap == 0) {
-                CloseFile();
+        // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE)
+        //         return false;
+        fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
+	if(fp == NULL) { return false; }
+
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
+
+        if (lpMap == 0) {  // TODO: should be checking mmap() == MAP_FAILED on
+			   //       all of these, and also make sure we munmap()
+                CloseFile(0);
                 return false;
         }
 
@@ -139,7 +151,7 @@ bool Signal::ReadDatFile()
                 }
 
 
-        CloseFile();
+        CloseFile(0);
         return true;
 }
 
@@ -199,13 +211,28 @@ bool Signal::ReadMitbihFile()
                 int lNum = (int)EcgHeaders.size();
                 int size = pEcgHeader->size;
 
-                fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-                if (fp == INVALID_HANDLE_VALUE || (GetFileSize(fp, 0) != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8))
-                        return false;
-                fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
-                lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
+                // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+                // if (fp == INVALID_HANDLE_VALUE || (GetFileSize(fp, 0) != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8))
+                //         return false;
+		fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
+                if (fp == NULL) { return false; }
+
+		// Find file size:
+		long file_size;
+		fseek(fp, 0, SEEK_END);
+		file_size = ftell(fp);
+		rewind(fp);
+
+                if (file_size != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8)
+		  { return false; }
+
+                // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
+                // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
+		int fp_int = fileno(fp);
+		lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
+
                 if (lpMap == 0) {
-                        CloseFile();
+                        CloseFile(0);
                         return false;
                 }
 
@@ -248,7 +275,7 @@ bool Signal::ReadMitbihFile()
                         }
                 }
                 
-                CloseFile();
+                CloseFile(0);
                 return true;
         } else {
                 fclose(fh);
@@ -338,7 +365,7 @@ int Signal::ParseMitbihHeader(FILE* fh)
                         hdr.mm = mm;
                         hdr.ss = ss;
                         for (int l = 0; l < 18; l++) {
-                                if (!stricmp(leads[l], str[9])) {
+                                if (!strcasecmp(leads[l], str[9])) {
                                         hdr.lead = l + 1;
                                         break;
                                 }
@@ -379,13 +406,19 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
         }
 
 
-        fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE)
-                return false;
-        fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(DATAHDR), 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize + sizeof(DATAHDR));
-        if (lpMap == 0) {
-                CloseFile();
+        // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE)
+        //         return false;
+        fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	if(fp == NULL) { return false; }
+
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(DATAHDR), 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize + sizeof(DATAHDR));
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, filesize + sizeof(DATAHDR), (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+
+	if (lpMap == 0) {
+                CloseFile(filesize + sizeof(DATAHDR));
                 return false;
         }
 
@@ -434,7 +467,7 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
                 }
         }
 
-        CloseFile();
+        CloseFile(filesize + sizeof(DATAHDR));
         return true;
 }
 
@@ -524,14 +557,22 @@ void Signal::MinMax(const double* buffer, int size, double& min, double& max) co
         }
 }
 
-void Signal::CloseFile()
+void Signal::CloseFile(int sizeof_lpmap)
 {
-        if (lpMap != 0)
-                UnmapViewOfFile(lpMap);
-        if (fpmap != 0)
-                CloseHandle(fpmap);
-        if (fp != 0 && fp != INVALID_HANDLE_VALUE)
-                CloseHandle(fp);
+  // We pass in sizeof_lpmap because as far as I can tell there's no good way to
+  // look it up here.  maybe we should just make a shared 'lpMap_size" variable?
+
+  if (lpMap != 0) {
+    // UnmapViewOfFile(lpMap);
+    munmap(lpMap, sizeof_lpmap);
+  }
+  if (fpmap != 0) {
+    CloseHandle(fpmap);
+  }
+  // if (fp != 0 && fp != INVALID_HANDLE_VALUE)
+  if (fp != NULL) {
+    fclose(fp);
+  }
 }
 
 double Signal::Mean(const double* buffer, int size) const

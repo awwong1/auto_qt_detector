@@ -245,14 +245,19 @@ bool FWT::FwtSaveFile(const wchar_t *name, const double *hipass, const double *l
                 break;
         }
 
-        fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE) {
-                fp = 0;
-                return false;
-        }
-        fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(FWTHDR), 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize + sizeof(FWTHDR));
+        // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE) {
+        //         fp = 0;
+        //         return false;
+        // }
+	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	if(fp == NULL) { fp = 0; return false; }
 
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(FWTHDR), 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, filesize + sizeof(FWTHDR));
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, filesize + sizeof(FWTHDR), (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+	
         lpf = (float *)lpMap;
         lps = (short *)lpMap;
         lpc = (char *)lpMap;
@@ -297,7 +302,7 @@ bool FWT::FwtSaveFile(const wchar_t *name, const double *hipass, const double *l
                 }
         }
 
-        CloseFile();
+        CloseFile(filesize + sizeof(FWTHDR));
         return true;
 }
 
@@ -305,14 +310,19 @@ bool FWT::FwtReadFile(const wchar_t *name, const char *appdir)
 {
         short tmp;
 
-        fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (fp == INVALID_HANDLE_VALUE) {
-                fp = 0;
-                return false;
-        }
-        fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
-        lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
+        // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        // if (fp == INVALID_HANDLE_VALUE) {
+        //         fp = 0;
+        //         return false;
+        // }
+        fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
+	if(fp == NULL) { fp = 0; return false; }
 
+        // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
+        // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
+	int fp_int = fileno(fp);
+	lpMap = mmap(NULL, 0, (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+	
         phdr = (PFWTHDR)lpMap;
         lpf = (float *)lpMap;
         lps = (short *)lpMap;
@@ -398,13 +408,13 @@ bool FWT::FwtReadFile(const wchar_t *name, const char *appdir)
                         G = LoadFilter(gL, gZ);
                         fclose(filter);
                 } else {
-                        CloseFile();
+                        CloseFile(0);
                         return false;
                 }
         }
 
 
-        CloseFile();
+        CloseFile(0);
         return true;
 }
 
