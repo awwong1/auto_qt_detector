@@ -113,7 +113,7 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-	fp = fopen( (const char*)name, "w+" );
+	fp = fopen( (const char*)name, "w+" );  // TODO: verify mode.  use open() instead?
 	if(fp == NULL) { return 0; }
 	// TODO: convert to mmap():
         fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize, 0);
@@ -133,7 +133,7 @@ float* CWT::CwtReadFile(const wchar_t *name)
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-        fp = fopen( (const char*)name, "r" );  // TODO: set correct mode here (WRITE, READ, OPEN_EXISTING)
+        fp = fopen( (const char*)name, "r" );  // TODO: set correct mode here (WRITE, READ, OPEN_EXISTING).  use open() instead?
 	if(fp == NULL) { return 0; }
 	// TODO: convert to mmap():
 	fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
