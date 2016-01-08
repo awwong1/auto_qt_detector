@@ -830,7 +830,7 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
         int samps;
         unsigned short anncode = 0;
         unsigned short type;
-        DWORD bytes;
+        DWORD bytes;  // TODO: remove
         char buff[1024];
 
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -838,15 +838,17 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
         //         return false;
 	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
+	int fp_int = fileno(fp);
 
         samps = ann[0][0];
         sprintf(buff, "%c%c%c%c%c%c", 0, 0xEC, HIWORD(LOBYTE(samps)), HIWORD(HIBYTE(samps)), LOWORD(LOBYTE(samps)), LOWORD(HIBYTE(samps)));
-        WriteFile(fp, buff, 6, &bytes, 0);  // TODO: write()
+        // WriteFile(fp, buff, 6, &bytes, 0);
+	write(fp_int, buff, 6);
         type = ann[0][1];
         anncode |= (type << 10);
         sprintf(buff, "%c%c", (char)LOBYTE(anncode), (char)HIBYTE(anncode));
-        WriteFile(fp, buff, 2, &bytes, 0);  // TODO: write()
-
+        // WriteFile(fp, buff, 2, &bytes, 0);
+	write(fp_int, buff, 2);
 
         for (int i = 1; i < nums; i++) {
                 samps = ann[i][0] - ann[i-1][0];
@@ -856,7 +858,9 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
 
                 if (samps > 1023) {
                         sprintf(buff, "%c%c%c%c%c%c", 0, 0xEC, HIWORD(LOBYTE(samps)), HIWORD(HIBYTE(samps)), LOWORD(LOBYTE(samps)), LOWORD(HIBYTE(samps)));
-                        WriteFile(fp, buff, 6, &bytes, 0);  // TODO: write()
+                        //WriteFile(fp, buff, 6, &bytes, 0);
+			write(fp_int, buff, 6);
+
                 } else
                         anncode = samps;
 
@@ -864,10 +868,12 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
                 anncode |= (type << 10);
 
                 sprintf(buff, "%c%c", (char)LOBYTE(anncode), (char)HIBYTE(anncode));
-                WriteFile(fp, buff, 2, &bytes, 0);  // TODO: write()
+                //WriteFile(fp, buff, 2, &bytes, 0);
+		write(fp_int, buff, 2);
         }
         sprintf(buff, "%c%c", 0, 0);
-        WriteFile(fp, buff, 2, &bytes, 0);  // TODO: write()
+        // WriteFile(fp, buff, 2, &bytes, 0);
+	write(fp_int, buff, 2);
 
         fclose(fp);
         return true;

@@ -566,9 +566,9 @@ void Signal::CloseFile(int sizeof_lpmap)
     // UnmapViewOfFile(lpMap);
     munmap(lpMap, sizeof_lpmap);
   }
-  if (fpmap != 0) {
-    CloseHandle(fpmap);
-  }
+  // if (fpmap != 0) {
+  //   CloseHandle(fpmap);
+  // }
   // if (fp != 0 && fp != INVALID_HANDLE_VALUE)
   if (fp != NULL) {
     fclose(fp);
