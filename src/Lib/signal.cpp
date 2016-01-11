@@ -23,32 +23,37 @@ Signal::~Signal()
 
 double* Signal::ReadFile(const char* name)
 {
-        wchar_t ustr[_MAX_PATH] = L"";
-        for (int i = 0; i < (int)strlen(name); i++)
-                mbtowc(ustr + i, name + i, MB_CUR_MAX);
-        return ReadFile(ustr);
+  wchar_t ustr[_MAX_PATH] = L"";
+  for (int i = 0; i < (int)strlen(name); i++) {
+    mbtowc(ustr + i, name + i, MB_CUR_MAX);
+  }
+  return ReadFile(ustr);
 }
 
 double* Signal::ReadFile(const wchar_t* name)
 {
-        wcscpy(EcgFileName, name);
-
-        if (!IsFileValid(name)) {
-	  fprintf(stderr, "Invalid file name.\n");
-	  return 0;
-	}
-
-        if (IsBinFile) {
-                if (!ReadDatFile())
-                        return 0;
-        } else {
-                if (!ReadTxtFile()) { //read text file
-                        if (!ReadMitbihFile()) //read mit-bih file
-                                return 0;
-                }
-        }
-
-        return GetData();
+  wcscpy(EcgFileName, name);
+  
+  if (!IsFileValid(name)) {
+    fprintf(stderr, "Invalid file name.\n");
+    return 0;
+  }
+  
+  printf("file is valid.\n");  // debugging
+  
+  if (IsBinFile) {
+    if (!ReadDatFile()) { return 0; }
+  }
+  else {
+    printf("reading as non-binfile.\n");  // debugging
+    if (!ReadTxtFile()) { //read text file
+      printf("reading as mit-bih file.\n");  // debugging
+      if (!ReadMitbihFile()) //read mit-bih file
+	{ return 0; }
+    }
+  }
+  
+  return GetData();
 }
 
 bool Signal::IsFileValid(const wchar_t* name)
@@ -70,6 +75,10 @@ bool Signal::IsFileValid(const wchar_t* name)
   lpMap = mmap(NULL, sizeof(DATAHDR), PROT_READ, MAP_SHARED, fp_int, 0);
 
   pEcgHeader = (PDATAHDR)lpMap;
+  
+  //printf("lpmap = %i\n", lpMap);  // debugging
+
+  //printf("header = %s\n", pEcgHeader->hdr);  // debugging
 
   if (lpMap != 0 && !memcmp(pEcgHeader->hdr, "DATA", 4)) {
     Length = pEcgHeader->size;
@@ -204,92 +213,109 @@ bool Signal::ReadTxtFile()
 
 bool Signal::ReadMitbihFile()
 {
-        wchar_t HeaFile[_MAX_PATH];
-        wcscpy(HeaFile, EcgFileName);
+  printf("reading mit file...\n");  // debugging
 
-        ChangeExtension(HeaFile, L".hea");
-        // FILE* fh = _wfopen(HeaFile, L"rt");
-        FILE* fh = fopen( (const char*)HeaFile, "rt" );  // no unicode
-        if (!fh)
-                return false;
+  wchar_t HeaFile[_MAX_PATH];
+  wcscpy(HeaFile, EcgFileName);
+  
+  ChangeExtension(HeaFile, L".hea");
 
-        if (ParseMitbihHeader(fh)) {
-                fclose(fh);
+  // Convert name to char* for fopen():
+  char buffer[PATH_MAX];
+  wcstombs(buffer, HeaFile, sizeof(buffer) );
 
-                pEcgHeader = &EcgHeaders[0];
-                int lNum = (int)EcgHeaders.size();
-                int size = pEcgHeader->size;
+  // FILE* fh = _wfopen(HeaFile, L"rt");
+  // FILE* fh = fopen( (const char*)HeaFile, "rt" );  // no unicode
+  FILE* fh = fopen( buffer, "rt" );  // no unicode
+  if (!fh) { return false; }
+  
+  printf("read header.\n");  // debugging
 
-                // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-                // if (fp == INVALID_HANDLE_VALUE || (GetFileSize(fp, 0) != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8))
-                //         return false;
-		fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
-                if (fp == NULL) { return false; }
+  if (ParseMitbihHeader(fh)) {
+    fclose(fh);
 
-		// Find file size:
-		long file_size;
-		fseek(fp, 0, SEEK_END);
-		file_size = ftell(fp);
-		rewind(fp);
+    printf("reading rest of file...\n");  // debugging
+    
+    pEcgHeader = &EcgHeaders[0];
+    int lNum = (int)EcgHeaders.size();
+    int size = pEcgHeader->size;
+    
+    // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    // if (fp == INVALID_HANDLE_VALUE || (GetFileSize(fp, 0) != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8))
+    //         return false;
+    wcstombs(buffer, EcgFileName, sizeof(buffer) );
+    fp = fopen( buffer, "r" );  // TODO: use open() instead?
+    // fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
+    if (fp == NULL) { return false; }
+    
+    // Find file size:
+    long file_size;
+    fseek(fp, 0, SEEK_END);
+    file_size = ftell(fp);
+    rewind(fp);
+    
+    if (file_size != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8)
+      { return false; }
+    
+    // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
+    // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
+    int fp_int = fileno(fp);
+    lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
+    
+    if (lpMap == 0) {
+      CloseFile(0);
+      return false;
+    }
+    
+    lps = (short *)lpMap;
+    lpc = (char *)lpMap;
+    
+    for (int i = 0; i < lNum; i++) {
+      pData = new double[pEcgHeader->size];
+      EcgSignals.push_back(pData);
+    }
+    
+    printf("starting loop.  s=%i, n=%i.\n", size, lNum);  // debugging
 
-                if (file_size != (lNum * pEcgHeader->size * pEcgHeader->bits) / 8)
-		  { return false; }
-
-                // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
-                // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
-		int fp_int = fileno(fp);
-		lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
-
-                if (lpMap == 0) {
-                        CloseFile(0);
-                        return false;
-                }
-
-                lps = (short *)lpMap;
-                lpc = (char *)lpMap;
-
-                for (int i = 0; i < lNum; i++) {
-                        pData = new double[pEcgHeader->size];
-                        EcgSignals.push_back(pData);
-                }
-
-                short tmp;
-                for (int s = 0; s < size; s++) {
-                        for (int n = 0; n < lNum; n++) {
-                                pData = EcgSignals[n];
-                                pEcgHeader = &EcgHeaders[n];
-
-                                switch (pEcgHeader->bits) {
-                                case 12:                                             //212 format   12bit
-                                        if ((s*lNum + n) % 2 == 0) {
-                                                tmp = MAKEWORD(lpc[0], lpc[1] & 0x0f);
-                                                if (tmp > 0x7ff)
-                                                        tmp |= 0xf000;
-                                                tmp -= pEcgHeader->bline;
-                                                pData[s] = (double)tmp / (double)pEcgHeader->umv;
-                                        } else {
-                                                tmp = MAKEWORD(lpc[2], (lpc[1] & 0xf0) >> 4);
-                                                if (tmp > 0x7ff)
-                                                        tmp |= 0xf000;
-                                                tmp -= pEcgHeader->bline;
-                                                pData[s] = (double)tmp / (double)pEcgHeader->umv;
-                                                lpc += 3;
-                                        }
-                                        break;
-
-                                case 16:                                      //16format
-                                        pData[s] = (double)(*lps++ - pEcgHeader->bline) / (double)pEcgHeader->umv;
-                                        break;
-                                }
-                        }
-                }
-
-                CloseFile(0);
-                return true;
-        } else {
-                fclose(fh);
-                return false;
-        }
+    short tmp;
+    for (int s = 0; s < size; s++) {
+      for (int n = 0; n < lNum; n++) {
+	pData = EcgSignals[n];
+	pEcgHeader = &EcgHeaders[n];
+	
+	switch (pEcgHeader->bits) {
+	case 12:                                             //212 format   12bit
+	  if ((s*lNum + n) % 2 == 0) {
+	    tmp = MAKEWORD(lpc[0], lpc[1] & 0x0f);
+	    if (tmp > 0x7ff)
+	      tmp |= 0xf000;
+	    tmp -= pEcgHeader->bline;
+	    pData[s] = (double)tmp / (double)pEcgHeader->umv;
+	  } else {
+	    tmp = MAKEWORD(lpc[2], (lpc[1] & 0xf0) >> 4);
+	    if (tmp > 0x7ff)
+	      tmp |= 0xf000;
+	    tmp -= pEcgHeader->bline;
+	    pData[s] = (double)tmp / (double)pEcgHeader->umv;
+	    lpc += 3;
+	  }
+	  break;
+	  
+	case 16:                                      //16format
+	  printf("reading 16-bit sample.\n");  // debugging
+	  pData[s] = (double)(*lps++ - pEcgHeader->bline) / (double)pEcgHeader->umv;  // TODO: fix segfault here
+	  break;
+	}
+      }
+    }
+    
+    CloseFile(0);
+    return true;
+  }
+  else {
+    fclose(fh);
+    return false;
+  }
 }
 
 double* Signal::GetData(int index)
