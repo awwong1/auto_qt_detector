@@ -37,9 +37,9 @@ double* Signal::ReadFile(const wchar_t* name)
 	  fprintf(stderr, "Invalid file name.\n");
 	  return 0;
 	}
-		
+
         if (IsBinFile) {
-                if (!ReadDatFile()) 
+                if (!ReadDatFile())
                         return 0;
         } else {
                 if (!ReadTxtFile()) { //read text file
@@ -53,35 +53,41 @@ double* Signal::ReadFile(const wchar_t* name)
 
 bool Signal::IsFileValid(const wchar_t* name)
 {
-        // fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        // if (fp == INVALID_HANDLE_VALUE)
-        //         return false;
+  // fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  // if (fp == INVALID_HANDLE_VALUE)
+  //         return false;
 
-        fp = fopen( (const char*)name, "r" );  // TODO: use open() instead?
-	if(fp == NULL) { return false; }  // TODO: figure out why we're failing here
+  // Convert name to char* for fopen():
+  char buffer[PATH_MAX];
+  wcstombs(buffer, name, sizeof(buffer) );
 
-        // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
-        // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
-	int fp_int = fileno(fp);
-	lpMap = mmap(NULL, sizeof(DATAHDR), PROT_READ, MAP_SHARED, fp_int, 0);
-	
-        pEcgHeader = (PDATAHDR)lpMap;
+  fp = fopen( buffer, "r" );  // TODO: use open() instead?
+  if(fp == NULL) { return false; }
 
-        if (lpMap != 0 && !memcmp(pEcgHeader->hdr, "DATA", 4)) {
-                Length = pEcgHeader->size;
-                SR = pEcgHeader->sr;
-                Bits = pEcgHeader->bits;
-                Lead = pEcgHeader->lead;
-                UmV = pEcgHeader->umv;
-                hh = pEcgHeader->hh;
-                mm = pEcgHeader->mm;
-                ss = pEcgHeader->ss;
-                IsBinFile = true;
-        } else
-                IsBinFile = false;
+  // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
+  // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
+  int fp_int = fileno(fp);
+  lpMap = mmap(NULL, sizeof(DATAHDR), PROT_READ, MAP_SHARED, fp_int, 0);
 
-        CloseFile(sizeof(DATAHDR));
-        return true;
+  pEcgHeader = (PDATAHDR)lpMap;
+
+  if (lpMap != 0 && !memcmp(pEcgHeader->hdr, "DATA", 4)) {
+    Length = pEcgHeader->size;
+    SR = pEcgHeader->sr;
+    Bits = pEcgHeader->bits;
+    Lead = pEcgHeader->lead;
+    UmV = pEcgHeader->umv;
+    hh = pEcgHeader->hh;
+    mm = pEcgHeader->mm;
+    ss = pEcgHeader->ss;
+    IsBinFile = true;
+  }
+  else {
+    IsBinFile = false;
+  }
+
+  CloseFile(sizeof(DATAHDR));
+  return true;
 }
 
 bool Signal::ReadDatFile()
@@ -204,7 +210,7 @@ bool Signal::ReadMitbihFile()
         ChangeExtension(HeaFile, L".hea");
         // FILE* fh = _wfopen(HeaFile, L"rt");
         FILE* fh = fopen( (const char*)HeaFile, "rt" );  // no unicode
-        if (!fh) 
+        if (!fh)
                 return false;
 
         if (ParseMitbihHeader(fh)) {
@@ -277,7 +283,7 @@ bool Signal::ReadMitbihFile()
                                 }
                         }
                 }
-                
+
                 CloseFile(0);
                 return true;
         } else {
@@ -288,11 +294,11 @@ bool Signal::ReadMitbihFile()
 
 double* Signal::GetData(int index)
 {
-        if (!EcgSignals.size()) 
+        if (!EcgSignals.size())
                 return 0;
-        if (index > (int)EcgSignals.size() - 1) 
+        if (index > (int)EcgSignals.size() - 1)
                 index = (int)EcgSignals.size() - 1;
-        else if (index < 0) 
+        else if (index < 0)
                 index = 0;
 
         pEcgHeader = &EcgHeaders[index];
@@ -758,12 +764,12 @@ void Signal::AutoCov(double* buffer, int size) const
         for (int i = 0; i < size; i++)
                 buffer[i] = rk[i];
 
-        delete[] rk;        
+        delete[] rk;
 }
 
 void Signal::AutoCov1(double* buffer, int size) const
 {
-        double* rk, mu;        
+        double* rk, mu;
         rk = new double[size];
 
         mu = Mean(buffer, size);
@@ -784,7 +790,7 @@ void Signal::AutoCov1(double* buffer, int size) const
         for (int i = 0; i < size; i++)
                 buffer[i] = rk[i];
 
-        delete[] rk;        
+        delete[] rk;
 }
 
 void Signal::AutoCor(double* buffer, int size) const
@@ -811,7 +817,7 @@ void Signal::AutoCor(double* buffer, int size) const
         for (int i = 0; i < size; i++)
                 buffer[i] = rk[i];
 
-        delete[] rk;        
+        delete[] rk;
 }
 
 void Signal::AutoCor1(double* buffer, int size) const
@@ -838,6 +844,5 @@ void Signal::AutoCor1(double* buffer, int size) const
         for (int i = 0; i < size; i++)
                 buffer[i] = rk[i];
 
-        delete[] rk;        
+        delete[] rk;
 }
-
