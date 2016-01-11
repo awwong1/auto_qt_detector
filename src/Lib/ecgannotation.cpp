@@ -57,206 +57,212 @@ EcgAnnotation::~EcgAnnotation()
 //
 int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fltdir)
 {
+  
+  double *pdata = (double *)malloc(size * sizeof(double));
+  for (int i = 0; i < size; i++) {
+    pdata[i] = data[i];
+  }
+  
+  
+  if (fltdir) {
+    printf("running Filter30hz().\n");  // debugging
+    if (Filter30hz(pdata, size, sr, fltdir) == false) { //pdata filed with filterd signal
+      delete[] pdata;  // TODO: mismatched, fix.
+      return 0;
+    }
+    
+    // 2 continuous passes of CWT filtering
+    /*if(Filter30hz(pdata,size,sr,fltdir,qNORM) == false)   //pdata filed with filterd signal
+      return 0;
+      if(stype == qNOISE)
+      if(Filter30hz(pdata,size,sr,fltdir,qNORM) == false)
+      return 0;*/
+  }
+  
+  double eCycle = (60.0 / (double)ahdr.maxbpm) - ahdr.maxQRS;  //secs
+  if (int(eCycle*sr) <= 0) {
+    eCycle = 0.1;
+    ahdr.maxbpm = int(60.0 / (ahdr.maxQRS + eCycle));
+  }
+  //////////////////////////////////////////////////////////////////////////////
+  
+  int lqNum = 0;
+  vector <int> QRS;    //clean QRS detected
+  int add = 0;
+  
+  while (pdata[add]) add += int(0.1 * sr);                  //skip QRS in begining
+  while (pdata[add] == 0) add++;                            //get  1st QRS
+  
+  QRS.push_back(add - 1);
+  /////////////////////////////////////////////////////////////////////////////
+  for (int m = add; m < size; m++) {                  //MAX 200bpm  [0,3 sec  min cario size]
+    m += int(ahdr.maxQRS * sr);                     //smpl + 0,20sec    [0,20 max QRS length]
+    
+    
+    if (m >= size) m = size - 1;
+    add = 0;
+    
+    //noise checking///////////////////////////////////////
+    if (m + int(eCycle*sr) >= size) { //near end of signal
+      QRS.pop_back();
+      break;
+    }
+    if (IsNoise(&pdata[m], eCycle*sr)) {  //smp(0.10sec)+0,20sec in noise
+      if (lqNum != (int)QRS.size() - 1)
+	MA.push_back(QRS[QRS.size()-1]);     //push MA noise location
+      
+      QRS.pop_back();
+      lqNum = QRS.size();
+      
+      //Find for next possible QRS start
+      while (IsNoise(&pdata[m], eCycle*sr)) {
+	m += int(eCycle * sr);
+	if (m >= size - int(eCycle*sr)) break;   //end of signal
+      }
+      
+      if (m >= size - int(eCycle*sr)) break;
+      else {
+	while (pdata[m] == 0) {
+	  m++;
+	  if (m >= size) break;
+	}
+	if (m >= size) break;
+	else {
+	  QRS.push_back(m - 1);
+	  continue;
+	}
+      }
+    }
+    ////////////////////////////////////////////////////////
+    
+    
+    while (pdata[m-add] == 0.0) add++;               //Find back for QRS end
+    
+    
+    if ((m - add + 1) - QRS[QRS.size()-1] > ahdr.minQRS*sr)  //QRS size > 0.04 sec
+      QRS.push_back(m - add + 2); //QRS end
+    else
+      QRS.pop_back();
+    
+    
+    m += int(eCycle * sr);                                //smpl + [0,20+0,10]sec    200bpm MAX
+    if (size - m < int(sr / 2)) break;
+    
+    
+    
+    while (pdata[m] == 0 && (size - m) >= int(sr / 2))   //Find nearest QRS
+      m++;
+    
+    if (size - m < int(sr / 2)) break;  //end of data
+    
+    QRS.push_back(m - 1);  //QRS begin
+  }
+  /////////////////////////////////////////////////////////////////////////////
 
-        double *pdata = (double *)malloc(size * sizeof(double));
-        for (int i = 0; i < size; i++)
-                pdata[i] = data[i];
-
-
-
-        if (fltdir) {
-                if (Filter30hz(pdata, size, sr, fltdir) == false) { //pdata filed with filterd signal
-                        delete[] pdata;
-                        return 0;
-                }
-
-                // 2 continuous passes of CWT filtering
-                /*if(Filter30hz(pdata,size,sr,fltdir,qNORM) == false)   //pdata filed with filterd signal
-                        return 0;
-                if(stype == qNOISE)
-                if(Filter30hz(pdata,size,sr,fltdir,qNORM) == false)
-                        return 0;*/
-        }
-
-
-        double eCycle = (60.0 / (double)ahdr.maxbpm) - ahdr.maxQRS;  //secs
-        if (int(eCycle*sr) <= 0) {
-                eCycle = 0.1;
-                ahdr.maxbpm = int(60.0 / (ahdr.maxQRS + eCycle));
-        }
-        //////////////////////////////////////////////////////////////////////////////
-
-        int lqNum = 0;
-        vector <int> QRS;    //clean QRS detected
-        int add = 0;
-
-        while (pdata[add]) add += int(0.1 * sr);                  //skip QRS in begining
-        while (pdata[add] == 0) add++;                            //get  1st QRS
-
-        QRS.push_back(add - 1);
-        /////////////////////////////////////////////////////////////////////////////
-        for (int m = add; m < size; m++) {                  //MAX 200bpm  [0,3 sec  min cario size]
-                m += int(ahdr.maxQRS * sr);                     //smpl + 0,20sec    [0,20 max QRS length]
-
-
-                if (m >= size) m = size - 1;
-                add = 0;
-
-                //noise checking///////////////////////////////////////
-                if (m + int(eCycle*sr) >= size) { //near end of signal
-                        QRS.pop_back();
-                        break;
-                }
-                if (IsNoise(&pdata[m], eCycle*sr)) {  //smp(0.10sec)+0,20sec in noise
-                        if (lqNum != (int)QRS.size() - 1)
-                                MA.push_back(QRS[QRS.size()-1]);     //push MA noise location
-
-                        QRS.pop_back();
-                        lqNum = QRS.size();
-
-                        //Find for next possible QRS start
-                        while (IsNoise(&pdata[m], eCycle*sr)) {
-                                m += int(eCycle * sr);
-                                if (m >= size - int(eCycle*sr)) break;   //end of signal
-                        }
-
-                        if (m >= size - int(eCycle*sr)) break;
-                        else {
-                                while (pdata[m] == 0) {
-                                        m++;
-                                        if (m >= size) break;
-                                }
-                                if (m >= size) break;
-                                else {
-                                        QRS.push_back(m - 1);
-                                        continue;
-                                }
-                        }
-                }
-                ////////////////////////////////////////////////////////
-
-
-                while (pdata[m-add] == 0.0) add++;               //Find back for QRS end
-
-
-                if ((m - add + 1) - QRS[QRS.size()-1] > ahdr.minQRS*sr)  //QRS size > 0.04 sec
-                        QRS.push_back(m - add + 2); //QRS end
-                else
-                        QRS.pop_back();
-
-
-                m += int(eCycle * sr);                                //smpl + [0,20+0,10]sec    200bpm MAX
-                if (size - m < int(sr / 2)) break;
-
-
-
-                while (pdata[m] == 0 && (size - m) >= int(sr / 2))   //Find nearest QRS
-                        m++;
-
-                if (size - m < int(sr / 2)) break;  //end of data
-
-                QRS.push_back(m - 1);  //QRS begin
-        }
-        /////////////////////////////////////////////////////////////////////////////
-        delete[] pdata;
-
-
-
-        qrsNum = QRS.size() / 2;
-
-        if (qrsNum > 0)                              //         46: ?
-        {                                           //          1: N    -1: nodata in **AUX
-                qrsANN = new int*[2*qrsNum];                    // [samps] [type] [?aux data]
-                for (int i = 0; i < 2*qrsNum; i++)
-                        qrsANN[i] = new int[3];
-
-                for (int i = 0; i < 2*qrsNum; i++) {
-                        qrsANN[i][0] = QRS[i];                                     //samp
-
-                        if (i % 2 == 0)
-                                qrsANN[i][1] = 1;                                        //type N
-                        else {
-                                qrsANN[i][1] = 40;                                      //type QRS)
-                                //if( (qrsANN[i][0]-qrsANN[i-1][0]) >= int(sr*0.12) || (qrsANN[i][0]-qrsANN[i-1][0]) <= int(sr*0.03) )
-                                // qrsANN[i-1][1] = 46;                                  //N or ? beat  (0.03?-0.12secs)
-                        }
-
-                        qrsANN[i][2] = -1;                                         //no aux data
-                }
-
-                return qrsANN;
-        } else
-                return 0;
+  printf("free()ing pdata.\n");  // debugging
+  delete[] pdata;
+  
+  
+  
+  qrsNum = QRS.size() / 2;
+  
+  if (qrsNum > 0)                              //         46: ?
+    {                                           //          1: N    -1: nodata in **AUX
+      qrsANN = new int*[2*qrsNum];                    // [samps] [type] [?aux data]
+      for (int i = 0; i < 2*qrsNum; i++)
+	qrsANN[i] = new int[3];
+      
+      for (int i = 0; i < 2*qrsNum; i++) {
+	qrsANN[i][0] = QRS[i];                                     //samp
+	
+	if (i % 2 == 0)
+	  qrsANN[i][1] = 1;                                        //type N
+	else {
+	  qrsANN[i][1] = 40;                                      //type QRS)
+	  //if( (qrsANN[i][0]-qrsANN[i-1][0]) >= int(sr*0.12) || (qrsANN[i][0]-qrsANN[i-1][0]) <= int(sr*0.03) )
+	  // qrsANN[i-1][1] = 46;                                  //N or ? beat  (0.03?-0.12secs)
+	}
+	
+	qrsANN[i][2] = -1;                                         //no aux data
+      }
+      
+      return qrsANN;
+    } else
+    return 0;
 }
 
 bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdir) const
 {
-        CWT cwt;
-        ///////////CWT 10Hz transform//////////////////////////////////////////
-        cwt.InitCWT(size, CWT::GAUS1, 0, sr);        //gauss1 wavelet 6-index
-        double *pspec = cwt.CwtTrans(data, ahdr.qrsFreq);      //10-13 Hz transform?
-        for (int i = 0; i < size; i++)
-                data[i] = pspec[i];
-        cwt.CloseCWT();
+  
+  printf("in 30hz fn.\n");  // debugging
 
-        //debug
-        //ToTxt(L"10hz.txt",data,size);
+  CWT cwt;
+  ///////////CWT 10Hz transform//////////////////////////////////////////
+  cwt.InitCWT(size, CWT::GAUS1, 0, sr);        //gauss1 wavelet 6-index
+  double *pspec = cwt.CwtTrans(data, ahdr.qrsFreq);      //10-13 Hz transform?
+  for (int i = 0; i < size; i++)
+    data[i] = pspec[i];
+  cwt.CloseCWT();
+  
+  //debug
+  //ToTxt(L"10hz.txt",data,size);
+  
+  wchar_t flt[_MAX_PATH] = L"";
+  wcscpy(flt, fltdir);
+  
+  switch (ahdr.ampQRS) {
+  default:
+  case INTER1:
+    wcscat(flt, L"/inter1.flt");
+    break;
+    
+  case BIOR13:
+    for (int i = 0; i < size; i++)  //ridges
+      data[i] *= (fabs(data[i]) / 2.0);
+    wcscat(flt, L"/bior13.flt");
+    break;
+  }
 
-        wchar_t flt[_MAX_PATH] = L"";
-        wcscpy(flt, fltdir);
+  FWT fwt;
+  ////////////FWT 0-30Hz removal//////////////////////////////////////////
+  if (fwt.InitFWT(flt, data, size) == false) {
+    fprintf(stderr, "fwt.InitFWT() failed!\n");
+    return false;
+  }
 
-        switch (ahdr.ampQRS) {
-        default:
-        case INTER1:
-                wcscat(flt, L"\\inter1.flt");
-                break;
+  int J = ceil(log2(sr / 23.0)) - 2;
+  //trans///////////////////////////////////////////////////
+  fwt.FwtTrans(J);
 
-        case BIOR13:
-                for (int i = 0; i < size; i++)  //ridges
-                        data[i] *= (fabs(data[i]) / 2.0);
-                wcscat(flt, L"\\bior13.flt");
-                break;
-        }
+  int *Jnumbs = fwt.GetJnumbs(J, size);
+  int hinum, lonum;
+  fwt.HiLoNumbs(J, size, hinum, lonum);
+  double *lo = fwt.GetFwtSpectrum();
+  double *hi = fwt.GetFwtSpectrum() + (size - hinum);
+  
+  int window;   //2.0sec window
+  for (int j = J; j > 0; j--) {
+    window = (2.0 * sr) / pow(2.0, (double)j);    //2.0sec interval
+    
+    Denoise(hi, Jnumbs[J-j], window, 0, false);  //hard,MINIMAX denoise [30-...Hz]
+    hi += Jnumbs[J-j];
+  }
+  for (int i = 0; i < lonum; i++)               //remove [0-30Hz]
+    lo[i] = 0.0;
+  
+  //synth/////////////////////////////
+  fwt.FwtSynth(J);
+  
+  for (int i = 0; i < fwt.GetLoBandSize(); i++)
+    data[i] = lo[i];
+  for (int i = size - (size - fwt.GetLoBandSize()); i < size; i++)
+    data[i] = 0.0;
 
-        FWT fwt;
-        ////////////FWT 0-30Hz removal//////////////////////////////////////////
-        if (fwt.InitFWT(flt, data, size) == false)
-                return false;
-
-        int J = ceil(log2(sr / 23.0)) - 2;
-        //trans///////////////////////////////////////////////////
-        fwt.FwtTrans(J);
-
-        int *Jnumbs = fwt.GetJnumbs(J, size);
-        int hinum, lonum;
-        fwt.HiLoNumbs(J, size, hinum, lonum);
-        double *lo = fwt.GetFwtSpectrum();
-        double *hi = fwt.GetFwtSpectrum() + (size - hinum);
-
-
-        int window;   //2.0sec window
-        for (int j = J; j > 0; j--) {
-                window = (2.0 * sr) / pow(2.0, (double)j);    //2.0sec interval
-
-                Denoise(hi, Jnumbs[J-j], window, 0, false);  //hard,MINIMAX denoise [30-...Hz]
-                hi += Jnumbs[J-j];
-        }
-        for (int i = 0; i < lonum; i++)               //remove [0-30Hz]
-                lo[i] = 0.0;
-
-        //synth/////////////////////////////
-        fwt.FwtSynth(J);
-
-        for (int i = 0; i < fwt.GetLoBandSize(); i++)
-                data[i] = lo[i];
-        for (int i = size - (size - fwt.GetLoBandSize()); i < size; i++)
-                data[i] = 0.0;
-
-        fwt.CloseFWT();
-
-        //debug
-        //ToTxt(L"10hz(intr1).txt",data,size);
-        return true;
+  fwt.CloseFWT();
+  
+  //debug
+  //ToTxt(L"10hz(intr1).txt",data,size);
+  return true;
 }
 
 

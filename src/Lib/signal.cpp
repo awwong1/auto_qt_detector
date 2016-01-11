@@ -106,7 +106,7 @@ bool Signal::ReadDatFile()
         // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-        fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
+        fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?  and do char conversion.
 	if(fp == NULL) { return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
@@ -180,7 +180,7 @@ bool Signal::ReadTxtFile()
         int res;
 
         // if ((in = _wfopen(EcgFileName, L"rt")) == 0)
-        if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode
+        if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode.  TODO: char conversion.
                 return false;
 
         for (;;) {
@@ -260,7 +260,7 @@ bool Signal::ReadMitbihFile()
     // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
     // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
     int fp_int = fileno(fp);
-    lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
+    lpMap = mmap(NULL, file_size, PROT_READ, MAP_SHARED, fp_int, 0);
     
     if (lpMap == 0) {
       CloseFile(0);
@@ -302,8 +302,7 @@ bool Signal::ReadMitbihFile()
 	  break;
 	  
 	case 16:                                      //16format
-	  printf("reading 16-bit sample.\n");  // debugging
-	  pData[s] = (double)(*lps++ - pEcgHeader->bline) / (double)pEcgHeader->umv;  // TODO: fix segfault here
+	  pData[s] = (double)(*lps++ - pEcgHeader->bline) / (double)pEcgHeader->umv;
 	  break;
 	}
       }
@@ -444,7 +443,7 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-        fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+        fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?  and do char conversion.
 	if(fp == NULL) { return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(DATAHDR), 0);
@@ -509,7 +508,7 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
 bool Signal::ToTxt(const wchar_t* name, const double* buffer, int size)
 {
         // in = _wfopen(name, L"wt");
-        in = fopen( (const char*)name, "wt" );  // no unicode
+        in = fopen( (const char*)name, "wt" );  // no unicode.  TODO: char conversion.
         if (in) {
                 for (int i = 0; i < size; i++)
                         fwprintf(in, L"%lf\n", buffer[i]);

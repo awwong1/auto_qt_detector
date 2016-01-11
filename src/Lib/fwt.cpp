@@ -28,31 +28,38 @@ FWT::~FWT()
 
 bool FWT::InitFWT(const wchar_t* fltname, const double* data, int size)
 {
-        // filter = _wfopen(fltname, L"rt");
-        filter = fopen( (const char*)fltname, "rt" );  // no unicode
-        if (filter) {
-                tH = LoadFilter(thL, thZ);
-                tG = LoadFilter(tgL, tgZ);
-                H = LoadFilter(hL, hZ);
-                G = LoadFilter(gL, gZ);
-                fclose(filter);
 
-                LoBandSize = size;
-                SignalSize = size;
-                pFwtSpectrum = (double *)malloc(sizeof(double) * size);
-                pTmpSpectrum = (double *)malloc(sizeof(double) * size);
-                pLoData = pTmpSpectrum;
-                pHiData = pTmpSpectrum + size;
-
-                for (int i = 0; i < size; i++)
-                        pFwtSpectrum[i] = data[i];
-                memset(pTmpSpectrum, 0, sizeof(double)*size);
-
-                J = 0;
-
-                return true;
-        } else
-                return false;
+  // Convert name to char* for fopen():
+  char buffer[PATH_MAX];
+  wcstombs(buffer, fltname, sizeof(buffer) );
+  
+  // filter = _wfopen(fltname, L"rt");
+  // filter = fopen( (const char*)fltname, "rt" );  // no unicode
+  filter = fopen( buffer, "rt" );  // no unicode
+  if (filter) {
+    tH = LoadFilter(thL, thZ);
+    tG = LoadFilter(tgL, tgZ);
+    H = LoadFilter(hL, hZ);
+    G = LoadFilter(gL, gZ);
+    fclose(filter);
+    
+    LoBandSize = size;
+    SignalSize = size;
+    pFwtSpectrum = (double *)malloc(sizeof(double) * size);
+    pTmpSpectrum = (double *)malloc(sizeof(double) * size);
+    pLoData = pTmpSpectrum;
+    pHiData = pTmpSpectrum + size;
+    
+    for (int i = 0; i < size; i++)
+      pFwtSpectrum[i] = data[i];
+    memset(pTmpSpectrum, 0, sizeof(double)*size);
+    
+    J = 0;
+    
+    return true;
+  }
+  else
+    { return false; }
 }
 
 double* FWT::LoadFilter(int& L, int& Z) const
