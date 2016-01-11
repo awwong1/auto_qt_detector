@@ -59,7 +59,7 @@ int main(int argc, char* argv[])  // no unicode args
     
     class Signal signal;
     if (signal.ReadFile(argv[1])) {
-      
+    
       int size = signal.GetLength();
       double sr = signal.GetSR();
       int h, m, s, ms;
@@ -136,12 +136,14 @@ int main(int argc, char* argv[])  // no unicode args
 	  wprintf(L"\n mean heart rate: %.2lf", signal.Mean(&rrs[0], (int)rrs.size()));
 	}
 	
-      } else {
+      }
+      else {
 	wprintf(L" could not get QRS complexes. make sure you have got \"filters\" directory in the ecg application dir.");
 	exit(1);
       }
       
-    } else {
+    }
+    else {
       wprintf(L" failed to read %s file\n", argv[1]);
       exit(1);
     }
