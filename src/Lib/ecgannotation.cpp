@@ -24,7 +24,7 @@ EcgAnnotation::EcgAnnotation(PANNHDR p): qrsNum(0), annNum(0), auxNum(0),
                 ahdr.minPQ = 0.07;      //min PQ duration
                 ahdr.maxPQ = 0.20;      //max PQ duration
                 ahdr.minQT = 0.21;      //min QT duration
-                ahdr.maxQT = 0.48;      //max QT duration
+                ahdr.maxQT = 0.48;      //max QT duration  // TODO: adjust for LQTS
                 ahdr.pFreq = 9.0;       //cwt Hz for P wave
                 ahdr.tFreq = 3.0;       //cwt Hz for T wave
                 ahdr.biTwave = NORMAL;  //normal wave                
@@ -325,502 +325,506 @@ void EcgAnnotation::GetEctopics(int **ann, int qrsnum, double sr) const
 // **ann [PQ,JP] pairs
 int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *fltdir, int **ann, int qrsnum)
 {
-        int size, annPos;
-        int T1 = -1, T = -1, T2 = -1, Twaves = 0;
-        int P1 = -1, P = -1, P2 = -1, Pwaves = 0;
-
-        CWT cwt;
-        vector <int> Pwave;
-        vector <int> Twave;                             //Twave [ ( , T , ) ]
-        double *pspec;                             //      [ 0 , 0 , 0 ]  0 no Twave
-        double min, max;                           //min,max for gaussian1 wave, center is zero crossing
-
-        double rr;   //rr interval
-
-        bool sign;
-        bool twave, pwave;
-
-
-        int add = 0;//int(sr*0.04);  //prevent imprecise QRS end detection
-
-        int maNum = 0;
-        for (int n = 0; n < qrsnum - 1; n++) {
-                annPos = ann[n*2+1][0];                //i
-                size = ann[n*2+2][0] - ann[n*2+1][0];  //i   size of  (QRS) <----> (QRS)
-
-                bool maNs = false;
-                for (int i = maNum; i < (int)MA.size(); i++) {
-                        if (MA[i] > ann[n*2+1][0] && MA[i] < ann[n*2+2][0]) {
-                                Pwave.push_back(0);
-                                Pwave.push_back(0);
-                                Pwave.push_back(0);
-                                Twave.push_back(0);
-                                Twave.push_back(0);
-                                Twave.push_back(0);
-                                maNum++;
-                                maNs = true;
-                                break;
-                        }
-                }
-                if (maNs) continue;
-
-
-                rr = (double)(ann[n*2+2][0] - ann[n*2][0]) / sr;
-                if (60.0 / rr < ahdr.minbpm || 60.0 / rr > ahdr.maxbpm - 20) { //check if normal RR interval (40bpm - 190bpm)
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                        Twave.push_back(0);
-                        Twave.push_back(0);
-                        Twave.push_back(0);
-                        continue;
-                }
-
-
-                ///////////////search for TWAVE///////////////////////////////////////////////////////////
-
-                if (sr*ahdr.maxQT - (ann[n*2+1][0] - ann[n*2+0][0]) > size - add)
-                        size = size - add;
-                else
-                        size = sr * ahdr.maxQT - (ann[n*2+1][0] - ann[n*2+0][0]) - add;
-
-
-                //double avg = Mean(data+annPos+add,size);         //avrg extension on boundaries
-                //double lvl,rvl;
-                //lvl = data[annPos+add];
-                //rvl = data[annPos+add+size-1];
-                if (ahdr.biTwave == BIPHASE)
-                        cwt.InitCWT(size, CWT::GAUS, 0, sr);                 //5-Gauss wlet
-                else
-                        cwt.InitCWT(size, CWT::GAUS1, 0, sr);                //6-Gauss1 wlet
-
-                pspec = cwt.CwtTrans(data + annPos + add, ahdr.tFreq);//,false,lvl,rvl);   //3Hz transform  pspec = size-2*add
-
-                //cwt.ToTxt(L"debugS.txt",data+annPos+add,size);    //T wave
-                //cwt.ToTxt(L"debugC.txt",pspec,size);               //T wave spectrum
-
-                MinMax(pspec, size, min, max);
-                for (int i = 0; i < size; i++) {
-                        if (pspec[i] == min) T1 = i + annPos + add;
-                        if (pspec[i] == max) T2 = i + annPos + add;
-                }
-                if (T1 > T2)swap(T1, T2);
-
-                //additional constraints on [T1 T T2] duration, symmetry, QT interval
-                twave = false;
-                if ((pspec[T1-annPos-add] < 0 && pspec[T2-annPos-add] > 0) || (pspec[T1-annPos-add] > 0 && pspec[T2-annPos-add] < 0))
-                        twave = true;
-                if (twave) {
-                        if ((double)(T2 - T1) >= 0.09*sr) { // && (double)(T2-T1)<=0.24*sr)   //check for T wave duration
-                                twave = true;                  //QT interval = .4*sqrt(RR)
-                                if ((double)(T2 - ann[n*2+0][0]) >= ahdr.minQT*sr && (double)(T2 - ann[n*2+0][0]) <= ahdr.maxQT*sr)
-                                        twave = true;
-                                else
-                                        twave = false;
-                        } else
-                                twave = false;
-                }
-
-                if (twave) {
-                        if (pspec[T1-annPos-add] > 0) sign = true;
-                        else sign = false;
-
-                        for (int i = T1 - annPos - add; i < T2 - annPos - add; i++) {
-                                if (sign) {
-                                        if (pspec[i] > 0) continue;
-                                } else {
-                                        if (pspec[i] < 0) continue;
-                                }
-
-                                T = i + annPos + add;
-                                break;
-                        }
-
-                        //check for T wave symetry//////////////////////////
-                        double ratio;
-                        if (T2 - T < T - T1) ratio = (double)(T2 - T) / (double)(T - T1);
-                        else ratio = (double)(T - T1) / (double)(T2 - T);
-                        ////////////////////////////////////////////////////
-
-                        if (ratio < 0.4) { //not a T wave
-                                Twave.push_back(0);
-                                Twave.push_back(0);
-                                Twave.push_back(0);
-                                twave = false;
-                        } else {
-                                //adjust center of T wave
-                                //smooth it with gaussian, Find max ?
-                                //cwt.ToTxt(L"debugS.txt",data+annPos+add,size);
-                                int Tcntr = FindTmax(data + T1, T2 - T1);
-                                if (Tcntr != -1) {
-                                        Tcntr += T1;
-                                        if (abs((Tcntr - T1) - ((T2 - T1) / 2)) < abs((T - T1) - ((T2 - T1) / 2)))  //which is close to center 0-cross or T max
-                                                T = Tcntr;
-                                }
-
-                                Twaves++;
-                                Twave.push_back(T1);
-                                Twave.push_back(T);
-                                Twave.push_back(T2);
-                        }
-                } else { //no T wave???    empty (QRS) <-------> (QRS)
-                        Twave.push_back(0);
-                        Twave.push_back(0);
-                        Twave.push_back(0);
-                }
-                T = -1;
-                ///////////////search for TWAVE///////////////////////////////////////////////////////////
-                cwt.CloseCWT();
-
-
-
-
-
-                ///////////////search for PWAVE///////////////////////////////////////////////////////////
-
-                size = ann[n*2+2][0] - ann[n*2+1][0];  //n   size of  (QRS) <----> (QRS)
-
-                if (sr*ahdr.maxPQ < size)
-                        size = sr * ahdr.maxPQ;
-
-                if (twave) {
-                        if (T2 > ann[n*2+2][0] - size - int(0.04*sr))   // pwave wnd far from Twave at least on 0.02sec
-                                size -= T2 - (ann[n*2+2][0] - size - int(0.04 * sr));
-                }
-                int size23 = (ann[n*2+2][0] - ann[n*2+1][0]) - size;
-
-                //size -= 0.02*sr;   //impresize QRS begin detection
-                if (size <= 0.03*sr) {
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                        continue;
-                }
-
-
-                //avg = Mean(data+annPos+size23,size);                     //avrg extension on boundaries
-                //lvl = data[annPos+size23];
-                //rvl = data[annPos+size23+size-1];
-                cwt.InitCWT(size, CWT::GAUS1, 0, sr);                                        //6-Gauss1 wlet
-                pspec = cwt.CwtTrans(data + annPos + size23, ahdr.pFreq);//,false,lvl,rvl);    //9Hz transform  pspec = size-2/3size
-
-                //cwt.ToTxt(L"debugS.txt",data+annPos+size23,size);
-                //cwt.ToTxt(L"debugC.txt",pspec,size);
-
-                MinMax(pspec, size, min, max);
-                for (int i = 0; i < size; i++) {
-                        if (pspec[i] == min) P1 = i + annPos + size23;
-                        if (pspec[i] == max) P2 = i + annPos + size23;
-                }
-                if (P1 > P2) swap(P1, P2);
-
-                //additional constraints on [P1 P P2] duration, symmetry, PQ interval
-                pwave = false;
-                if ((pspec[P1-annPos-size23] < 0 && pspec[P2-annPos-size23] > 0) || (pspec[P1-annPos-size23] > 0 && pspec[P2-annPos-size23] < 0))
-                        pwave = true;
-                if (pwave) {
-                        if ((double)(P2 - P1) >= 0.03*sr && (double)(P2 - P1) <= 0.15*sr) { //check for P wave duration  9Hz0.03 5Hz0.05
-                                pwave = true;                //PQ interval = [0.07 - 0.12,0.20]
-                                if ((double)(ann[n*2+2][0] - P1) >= ahdr.minPQ*sr && (double)(ann[n*2+2][0] - P1) <= ahdr.maxPQ*sr)
-                                        pwave = true;
-                                else
-                                        pwave = false;
-                        } else
-                                pwave = false;
-                }
-
-                if (pwave) {
-                        if (pspec[P1-annPos-size23] > 0) sign = true;
-                        else sign = false;
-
-                        for (int i = P1 - annPos - size23; i < P2 - annPos - size23; i++) {
-                                if (sign) {
-                                        if (pspec[i] > 0) continue;
-                                } else {
-                                        if (pspec[i] < 0) continue;
-                                }
-
-                                P = i + annPos + size23;
-                                break;
-                        }
-
-                        //check for T wave symetry//////////////////////////
-                        double ratio;
-                        if (P2 - P < P - P1) ratio = (double)(P2 - P) / (double)(P - P1);
-                        else ratio = (double)(P - P1) / (double)(P2 - P);
-                        ////////////////////////////////////////////////////
-
-                        if (ratio < 0.4f) { //not a P wave
-                                Pwave.push_back(0);
-                                Pwave.push_back(0);
-                                Pwave.push_back(0);
-                        } else {
-                                Pwaves++;
-                                Pwave.push_back(P1);
-                                Pwave.push_back(P);
-                                Pwave.push_back(P2);
-                        }
-                } else {
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                        Pwave.push_back(0);
-                }
-                P1 = -1;
-                P = -1;
-                P2 = -1;
-                ///////////////search for PWAVE///////////////////////////////////////////////////////////
-                cwt.CloseCWT();
-
-        }
-
-
-
-
-
-
-        /////////////////get q,r,s peaks//////////////////////////////////////////////////////////
-        // on a denoised signal
-
-        int peaksnum = 0;
-        int Q, R, S;
-        vector <int> qrsPeaks;          //q,r,s peaks [ q , r , s ]
-                                        //            [ 0,  R , 0 ]  zero if not defined
-        vector <char> qrsTypes;         //[q,r,s] or [_,R,s], etc...
-
-
-        for (int n = 0; n < qrsnum; n++) { //fill with zeros
-                for (int i = 0; i < 3; i++) {
-                        qrsPeaks.push_back(0);
-                        qrsTypes.push_back(' ');
-                }
-        }
-
-
-        double *buff = (double *)malloc(length * sizeof(double));
-        for (int i = 0; i < length; i++)
-                buff[i] = data[i];
-
-        EcgDenoise enoise;
-        enoise.InitDenoise(fltdir, buff, length, sr);
-        if (enoise.LFDenoise()) {
-                //ToTxt(L"f.txt",buff,length);
-                double *pbuff;
-                for (int n = 0; n < qrsnum; n++) {
-                        annPos = ann[n*2][0];   //PQ
-                        size = ann[n*2+1][0] - ann[n*2][0] + 1; //PQ-Jpnt, including Jpnt
-
-                        pbuff = &buff[annPos];
-
-                        Q = -1;
-                        FindRS(pbuff, size, R, S, ahdr.minUmV);
-                        if (R != -1) R += annPos;
-                        if (S != -1) S += annPos;
-
-                        if (R != -1 && S != -1) {  // Rpeak > 0mV Speak < 0mV
-                                if (S < R) { //check for S
-                                        if (buff[R] > -buff[S]) {
-                                                Q = S;
-                                                S = -1;
-
-                                                size = ann[n*2+1][0] - R + 1;  //including Jpnt
-                                                pbuff = &buff[R];
-                                                S = Finds(pbuff, size, 0.05);
-                                                if (S != -1) S += R;
-                                        }
-                                } else {   //check for Q
-                                        size = R - annPos + 1;  //including R peak
-                                        Q = Findq(pbuff, size, 0.05);
-                                        if (Q != -1) Q += annPos;
-                                }
-                        }
-                        //else if only S
-                        else if (S != -1) { //Find small r if only S detected  in rS large T lead
-                                size = S - annPos + 1; //including S peak
-                                pbuff = &buff[annPos];
-                                R = Findr(pbuff, size, 0.05);
-                                if (R != -1) R += annPos;
-                        }
-                        //else if only R
-                        else if (R != -1) { //only R Find small q,s
-                                size = R - annPos + 1; //including R peak
-                                Q = Findq(pbuff, size, 0.05);
-                                if (Q != -1) Q += annPos;
-                                size = ann[n*2+1][0] - R + 1;  //including Jpnt
-                                pbuff = &buff[R];
-                                S = Finds(pbuff, size, 0.05);
-                                if (S != -1) S += R;
-                        }
-
-
-                        //put peaks to qrsPeaks vector
-                        if (R == -1 && S == -1) { //no peaks
-                                ann[n*2][1] = 16;   //ARTEFACT
-                                //remove P,T
-                                if (n != 0) {
-                                        if (Pwave[3*(n-1)]) {
-                                                Pwaves--;
-                                                Pwave[3*(n-1)] = 0;
-                                                Pwave[3*(n-1)+1] = 0;
-                                                Pwave[3*(n-1)+2] = 0;
-                                        }
-                                }
-                                if (n != qrsnum - 1) {
-                                        if (Twave[3*n]) {
-                                                Twaves--;
-                                                Twave[3*n] = 0;
-                                                Twave[3*n+1] = 0;
-                                                Twave[3*n+2] = 0;
-                                        }
-                                }
-                        }
-                        if (Q != -1) {
-                                peaksnum++;
-                                qrsPeaks[n*3] = Q;
-                                if (fabs(buff[Q]) > 0.5)
-                                        qrsTypes[n*3] = 17; //'Q';
-                                else
-                                        qrsTypes[n*3] = 15; //'q';
-                        }
-                        if (R != -1) {
-			  printf("found 'R'.\n");  // debugging
-			  peaksnum++;
-			  qrsPeaks[n*3+1] = R;
-			  if (fabs(buff[R]) > 0.5)
-			    { qrsTypes[n*3+1] = 48; } //'R';
-			  else
-			    { qrsTypes[n*3+1] = 47; } //'r';
-                        }
-                        if (S != -1) {
-                                peaksnum++;
-                                qrsPeaks[n*3+2] = S;
-                                if (fabs(buff[S]) > 0.5)
-                                        qrsTypes[n*3+2] = 50; //'S';
-                                else
-                                        qrsTypes[n*3+2] = 49; //'s';
-                        }
-                }
-        }
-
-        free(buff);
-        /////////////////get q,r,s peaks//////////////////////////////////////////////////////////
-
-
-
-
-
-
-        ///////////////////////// complete annotation array///////////////////////////////////////
-        maNum = 0;
-
-        //Pwave vec size = Twave vec size
-        annNum = Pwaves * 3 + qrsnum * 2 + peaksnum + Twaves * 3 + (int)MA.size();   //P1 P P2 [QRS] T1 T T2  noise annotation
-        if (annNum > qrsnum)                        //42-(p 43-p) 24-Pwave
-        {                                           //44-(t 45-t) 27-Twave
-                ANN = new int*[annNum];                    // [samps] [type] [?aux data]
-                for (int i = 0; i < annNum; i++)
-                        ANN[i] = new int[3];
-
-                int index = 0; //index to ANN
-                int qindex = 0;  //index to qrsANN
-
-                for (int i = 0; i < (int)Twave.size(); i += 3) {   //Twave=Pwaves=qrsPeaks size
-                        //QRS complex
-                        ANN[index][0] = ann[qindex][0];           //(QRS
-                        ANN[index][1] = ann[qindex][1];           //
-                        ANN[index++][2] = ann[qindex++][2];       //aux
-                        if (qrsPeaks[i]) { //q
-                                ANN[index][0] = qrsPeaks[i];
-                                ANN[index][1] = qrsTypes[i];
-                                ANN[index++][2] = -1;              //no aux
-                        }
-                        if (qrsPeaks[i+1]) { //r
-                                ANN[index][0] = qrsPeaks[i+1];
-                                ANN[index][1] = qrsTypes[i+1];
-                                ANN[index++][2] = -1;              //no aux
-                        }
-                        if (qrsPeaks[i+2]) { //s
-                                ANN[index][0] = qrsPeaks[i+2];
-                                ANN[index][1] = qrsTypes[i+2];
-                                ANN[index++][2] = -1;              //no aux
-                        }
-                        ANN[index][0] = ann[qindex][0];           //QRS)
-                        ANN[index][1] = ann[qindex][1];           //
-                        ANN[index++][2] = ann[qindex++][2];       //aux
-
-                        //T wave
-                        if (Twave[i]) {
-                                ANN[index][0] = Twave[i];                //(t
-                                ANN[index][1] = 44;
-                                ANN[index++][2] = -1;                    //no aux
-                                ANN[index][0] = Twave[i+1];              //T
-                                ANN[index][1] = 27;
-                                ANN[index++][2] = -1;                    //no aux
-                                ANN[index][0] = Twave[i+2];              //t)
-                                ANN[index][1] = 45;
-                                ANN[index++][2] = -1;                    //no aux
-                        }
-                        //P wave
-                        if (Pwave[i]) {
-                                ANN[index][0] = Pwave[i];                //(t
-                                ANN[index][1] = 42;
-                                ANN[index++][2] = -1;                    //no aux
-                                ANN[index][0] = Pwave[i+1];              //T
-                                ANN[index][1] = 24;
-                                ANN[index++][2] = -1;                    //no aux
-                                ANN[index][0] = Pwave[i+2];              //t)
-                                ANN[index][1] = 43;
-                                ANN[index++][2] = -1;                    //no aux
-                        }
-
-                        if (!Twave[i] && !Pwave[i]) {          //check for MA noise
-                                for (int m = maNum; m < (int)MA.size(); m++) {
-                                        if (MA[m] > ann[qindex-1][0] && MA[m] < ann[qindex][0]) {
-                                                ANN[index][0] = MA[m];      //Noise
-                                                ANN[index][1] = 14;
-                                                ANN[index++][2] = -1;       //no aux
-                                                maNum++;
-                                                break;
-                                        }
-                                }
-                        }
-                }
-
-                //last QRS complex
-                int ii = 3 * (qrsnum - 1);
-                ANN[index][0] = ann[qindex][0];           //(QRS
-                ANN[index][1] = ann[qindex][1];           //
-                ANN[index++][2] = ann[qindex++][2];       //aux
-                if (qrsPeaks[ii]) { //q
-                        ANN[index][0] = qrsPeaks[ii];
-                        ANN[index][1] = qrsTypes[ii];
-                        ANN[index++][2] = -1;              //no aux
-                }
-                if (qrsPeaks[ii+1]) { //r
-                        ANN[index][0] = qrsPeaks[ii+1];
-                        ANN[index][1] = qrsTypes[ii+1];
-                        ANN[index++][2] = -1;              //no aux
-                }
-                if (qrsPeaks[ii+2]) { //s
-                        ANN[index][0] = qrsPeaks[ii+2];
-                        ANN[index][1] = qrsTypes[ii+2];
-                        ANN[index++][2] = -1;              //no aux
-                }
-                ANN[index][0] = ann[qindex][0];           //QRS)
-                ANN[index][1] = ann[qindex][1];           //
-                ANN[index++][2] = ann[qindex++][2];       //aux
-
-                //check if noise after last qrs
-                if (maNum < (int)MA.size()) {
-                        if (MA[maNum] > ann[qindex-1][0]) {
-                                ANN[index][0] = MA[maNum];      //Noise
-                                ANN[index][1] = 14;
-                                ANN[index++][2] = -1;
-                        }
-                }
-
-                return ANN;
-        } else
-                return 0;
+  int size, annPos;
+  int T1 = -1, T = -1, T2 = -1, Twaves = 0;
+  int P1 = -1, P = -1, P2 = -1, Pwaves = 0;
+  
+  CWT cwt;
+  vector <int> Pwave;
+  vector <int> Twave;                             //Twave [ ( , T , ) ]
+  double *pspec;                             //      [ 0 , 0 , 0 ]  0 no Twave
+  double min, max;                           //min,max for gaussian1 wave, center is zero crossing
+  
+  double rr;   //rr interval
+  
+  bool sign;
+  bool twave, pwave;
+  
+  
+  int add = 0;//int(sr*0.04);  //prevent imprecise QRS end detection
+  
+  int maNum = 0;
+  for (int n = 0; n < qrsnum - 1; n++) {
+    annPos = ann[n*2+1][0];                //i
+    size = ann[n*2+2][0] - ann[n*2+1][0];  //i   size of  (QRS) <----> (QRS)
+    
+    bool maNs = false;
+    for (int i = maNum; i < (int)MA.size(); i++) {
+      if (MA[i] > ann[n*2+1][0] && MA[i] < ann[n*2+2][0]) {
+	Pwave.push_back(0);
+	Pwave.push_back(0);
+	Pwave.push_back(0);
+	Twave.push_back(0);
+	Twave.push_back(0);
+	Twave.push_back(0);
+	maNum++;
+	maNs = true;
+	break;
+      }
+    }
+    if (maNs) continue;
+    
+    
+    rr = (double)(ann[n*2+2][0] - ann[n*2][0]) / sr;
+    if (60.0 / rr < ahdr.minbpm || 60.0 / rr > ahdr.maxbpm - 20) { //check if normal RR interval (40bpm - 190bpm)
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+      Twave.push_back(0);
+      Twave.push_back(0);
+      Twave.push_back(0);
+      continue;
+    }
+    
+    
+    ///////////////search for TWAVE///////////////////////////////////////////////////////////
+    
+    if (sr*ahdr.maxQT - (ann[n*2+1][0] - ann[n*2+0][0]) > size - add)
+      size = size - add;
+    else
+      size = sr * ahdr.maxQT - (ann[n*2+1][0] - ann[n*2+0][0]) - add;
+    
+    
+    //double avg = Mean(data+annPos+add,size);         //avrg extension on boundaries
+    //double lvl,rvl;
+    //lvl = data[annPos+add];
+    //rvl = data[annPos+add+size-1];
+    if (ahdr.biTwave == BIPHASE)
+      cwt.InitCWT(size, CWT::GAUS, 0, sr);                 //5-Gauss wlet
+    else
+      cwt.InitCWT(size, CWT::GAUS1, 0, sr);                //6-Gauss1 wlet
+    
+    pspec = cwt.CwtTrans(data + annPos + add, ahdr.tFreq);//,false,lvl,rvl);   //3Hz transform  pspec = size-2*add
+    
+    //cwt.ToTxt(L"debugS.txt",data+annPos+add,size);    //T wave
+    //cwt.ToTxt(L"debugC.txt",pspec,size);               //T wave spectrum
+    
+    MinMax(pspec, size, min, max);
+    for (int i = 0; i < size; i++) {
+      if (pspec[i] == min) T1 = i + annPos + add;
+      if (pspec[i] == max) T2 = i + annPos + add;
+    }
+    if (T1 > T2)swap(T1, T2);
+    
+    //additional constraints on [T1 T T2] duration, symmetry, QT interval
+    twave = false;
+    if ((pspec[T1-annPos-add] < 0 && pspec[T2-annPos-add] > 0) || (pspec[T1-annPos-add] > 0 && pspec[T2-annPos-add] < 0))
+      twave = true;
+    if (twave) {
+      if ((double)(T2 - T1) >= 0.09*sr) { // && (double)(T2-T1)<=0.24*sr)   //check for T wave duration
+	twave = true;                  //QT interval = .4*sqrt(RR)
+	if ((double)(T2 - ann[n*2+0][0]) >= ahdr.minQT*sr && (double)(T2 - ann[n*2+0][0]) <= ahdr.maxQT*sr)
+	  twave = true;
+	else
+	  twave = false;
+      } else
+	twave = false;
+    }
+    
+    if (twave) {
+      if (pspec[T1-annPos-add] > 0) sign = true;
+      else sign = false;
+      
+      for (int i = T1 - annPos - add; i < T2 - annPos - add; i++) {
+	if (sign) {
+	  if (pspec[i] > 0) continue;
+	} else {
+	  if (pspec[i] < 0) continue;
+	}
+	
+	T = i + annPos + add;
+	break;
+      }
+      
+      //check for T wave symetry//////////////////////////
+      double ratio;
+      if (T2 - T < T - T1) ratio = (double)(T2 - T) / (double)(T - T1);
+      else ratio = (double)(T - T1) / (double)(T2 - T);
+      ////////////////////////////////////////////////////
+      
+      if (ratio < 0.4) { //not a T wave
+	Twave.push_back(0);
+	Twave.push_back(0);
+	Twave.push_back(0);
+	twave = false;
+      } else {
+	//adjust center of T wave
+	//smooth it with gaussian, Find max ?
+	//cwt.ToTxt(L"debugS.txt",data+annPos+add,size);
+	int Tcntr = FindTmax(data + T1, T2 - T1);
+	if (Tcntr != -1) {
+	  Tcntr += T1;
+	  if (abs((Tcntr - T1) - ((T2 - T1) / 2)) < abs((T - T1) - ((T2 - T1) / 2)))  //which is close to center 0-cross or T max
+	    T = Tcntr;
+	}
+	
+	Twaves++;
+	Twave.push_back(T1);
+	Twave.push_back(T);
+	Twave.push_back(T2);
+      }
+    } else { //no T wave???    empty (QRS) <-------> (QRS)
+      Twave.push_back(0);
+      Twave.push_back(0);
+      Twave.push_back(0);
+    }
+    T = -1;
+    ///////////////search for TWAVE///////////////////////////////////////////////////////////
+    cwt.CloseCWT();
+    
+    
+    
+    
+    
+    ///////////////search for PWAVE///////////////////////////////////////////////////////////
+    
+    size = ann[n*2+2][0] - ann[n*2+1][0];  //n   size of  (QRS) <----> (QRS)
+    
+    if (sr*ahdr.maxPQ < size)
+      size = sr * ahdr.maxPQ;
+    
+    if (twave) {
+      if (T2 > ann[n*2+2][0] - size - int(0.04*sr))   // pwave wnd far from Twave at least on 0.02sec
+	size -= T2 - (ann[n*2+2][0] - size - int(0.04 * sr));
+    }
+    int size23 = (ann[n*2+2][0] - ann[n*2+1][0]) - size;
+    
+    //size -= 0.02*sr;   //impresize QRS begin detection
+    if (size <= 0.03*sr) {
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+      continue;
+    }
+    
+    
+    //avg = Mean(data+annPos+size23,size);                     //avrg extension on boundaries
+    //lvl = data[annPos+size23];
+    //rvl = data[annPos+size23+size-1];
+    cwt.InitCWT(size, CWT::GAUS1, 0, sr);                                        //6-Gauss1 wlet
+    pspec = cwt.CwtTrans(data + annPos + size23, ahdr.pFreq);//,false,lvl,rvl);    //9Hz transform  pspec = size-2/3size
+    
+    //cwt.ToTxt(L"debugS.txt",data+annPos+size23,size);
+    //cwt.ToTxt(L"debugC.txt",pspec,size);
+    
+    MinMax(pspec, size, min, max);
+    for (int i = 0; i < size; i++) {
+      if (pspec[i] == min) P1 = i + annPos + size23;
+      if (pspec[i] == max) P2 = i + annPos + size23;
+    }
+    if (P1 > P2) swap(P1, P2);
+    
+    //additional constraints on [P1 P P2] duration, symmetry, PQ interval
+    pwave = false;
+    if ((pspec[P1-annPos-size23] < 0 && pspec[P2-annPos-size23] > 0) || (pspec[P1-annPos-size23] > 0 && pspec[P2-annPos-size23] < 0))
+      pwave = true;
+    if (pwave) {
+      if ((double)(P2 - P1) >= 0.03*sr && (double)(P2 - P1) <= 0.15*sr) { //check for P wave duration  9Hz0.03 5Hz0.05
+	pwave = true;                //PQ interval = [0.07 - 0.12,0.20]
+	if ((double)(ann[n*2+2][0] - P1) >= ahdr.minPQ*sr && (double)(ann[n*2+2][0] - P1) <= ahdr.maxPQ*sr)
+	  pwave = true;
+	else
+	  pwave = false;
+      } else
+	pwave = false;
+    }
+    
+    if (pwave) {
+      if (pspec[P1-annPos-size23] > 0) sign = true;
+      else sign = false;
+      
+      for (int i = P1 - annPos - size23; i < P2 - annPos - size23; i++) {
+	if (sign) {
+	  if (pspec[i] > 0) continue;
+	} else {
+	  if (pspec[i] < 0) continue;
+	}
+	
+	P = i + annPos + size23;
+	break;
+      }
+      
+      //check for T wave symetry//////////////////////////
+      double ratio;
+      if (P2 - P < P - P1) ratio = (double)(P2 - P) / (double)(P - P1);
+      else ratio = (double)(P - P1) / (double)(P2 - P);
+      ////////////////////////////////////////////////////
+      
+      if (ratio < 0.4f) { //not a P wave
+	Pwave.push_back(0);
+	Pwave.push_back(0);
+	Pwave.push_back(0);
+      } else {
+	Pwaves++;
+	Pwave.push_back(P1);
+	Pwave.push_back(P);
+	Pwave.push_back(P2);
+      }
+    } else {
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+      Pwave.push_back(0);
+    }
+    P1 = -1;
+    P = -1;
+    P2 = -1;
+    ///////////////search for PWAVE///////////////////////////////////////////////////////////
+    cwt.CloseCWT();
+    
+  }
+  
+  
+  
+  
+  
+  
+  /////////////////get q,r,s peaks//////////////////////////////////////////////////////////
+  // on a denoised signal
+  
+  int peaksnum = 0;
+  int Q, R, S;
+  vector <int> qrsPeaks;          //q,r,s peaks [ q , r , s ]
+  //            [ 0,  R , 0 ]  zero if not defined
+  vector <char> qrsTypes;         //[q,r,s] or [_,R,s], etc...
+  
+  
+  for (int n = 0; n < qrsnum; n++) { //fill with zeros
+    for (int i = 0; i < 3; i++) {
+      qrsPeaks.push_back(0);
+      qrsTypes.push_back(' ');
+    }
+  }
+  
+  
+  double *buff = (double *)malloc(length * sizeof(double));
+  for (int i = 0; i < length; i++)
+    buff[i] = data[i];
+  
+  EcgDenoise enoise;
+  //wprintf(L"Running InitDenoise()...\n");  // debugging
+  enoise.InitDenoise(fltdir, buff, length, sr);
+  if (enoise.LFDenoise()) {
+    //ToTxt(L"f.txt",buff,length);
+    double *pbuff;
+    wprintf(L"starting 0->qrsnum loop...\n");  // debugging
+    for (int n = 0; n < qrsnum; n++) {
+      annPos = ann[n*2][0];   //PQ
+      size = ann[n*2+1][0] - ann[n*2][0] + 1; //PQ-Jpnt, including Jpnt
+      
+      pbuff = &buff[annPos];
+      
+      Q = -1;
+      FindRS(pbuff, size, R, S, ahdr.minUmV);
+      if (R != -1) R += annPos;
+      if (S != -1) S += annPos;
+      
+      if (R != -1 && S != -1) {  // Rpeak > 0mV Speak < 0mV
+	if (S < R) { //check for S
+	  if (buff[R] > -buff[S]) {
+	    Q = S;
+	    S = -1;
+	    
+	    size = ann[n*2+1][0] - R + 1;  //including Jpnt
+	    pbuff = &buff[R];
+	    S = Finds(pbuff, size, 0.05);
+	    if (S != -1) S += R;
+	  }
+	} else {   //check for Q
+	  size = R - annPos + 1;  //including R peak
+	  Q = Findq(pbuff, size, 0.05);
+	  if (Q != -1) Q += annPos;
+	}
+      }
+      //else if only S
+      else if (S != -1) { //Find small r if only S detected  in rS large T lead
+	size = S - annPos + 1; //including S peak
+	pbuff = &buff[annPos];
+	R = Findr(pbuff, size, 0.05);
+	if (R != -1) R += annPos;
+      }
+      //else if only R
+      else if (R != -1) { //only R Find small q,s
+	size = R - annPos + 1; //including R peak
+	Q = Findq(pbuff, size, 0.05);
+	if (Q != -1) Q += annPos;
+	size = ann[n*2+1][0] - R + 1;  //including Jpnt
+	pbuff = &buff[R];
+	S = Finds(pbuff, size, 0.05);
+	if (S != -1) S += R;
+      }
+      
+      
+      //put peaks to qrsPeaks vector
+      if (R == -1 && S == -1) { //no peaks
+	ann[n*2][1] = 16;   //ARTEFACT
+	//remove P,T
+	if (n != 0) {
+	  if (Pwave[3*(n-1)]) {
+	    Pwaves--;
+	    Pwave[3*(n-1)] = 0;
+	    Pwave[3*(n-1)+1] = 0;
+	    Pwave[3*(n-1)+2] = 0;
+	  }
+	}
+	if (n != qrsnum - 1) {
+	  if (Twave[3*n]) {
+	    Twaves--;
+	    Twave[3*n] = 0;
+	    Twave[3*n+1] = 0;
+	    Twave[3*n+2] = 0;
+	  }
+	}
+      }
+      if (Q != -1) {
+	wprintf(L"found 'Q'.\n");  // debugging
+	peaksnum++;
+	qrsPeaks[n*3] = Q;
+	if (fabs(buff[Q]) > 0.5)
+	  qrsTypes[n*3] = 17; //'Q';
+	else
+	  qrsTypes[n*3] = 15; //'q';
+      }
+      if (R != -1) {
+	wprintf(L"found 'R'.\n");  // debugging
+	peaksnum++;
+	qrsPeaks[n*3+1] = R;
+	if (fabs(buff[R]) > 0.5)
+	  { qrsTypes[n*3+1] = 48; } //'R';
+	else
+	  { qrsTypes[n*3+1] = 47; } //'r';
+      }
+      if (S != -1) {
+	wprintf(L"found 'S'.\n");  // debugging
+	peaksnum++;
+	qrsPeaks[n*3+2] = S;
+	if (fabs(buff[S]) > 0.5)
+	  qrsTypes[n*3+2] = 50; //'S';
+	else
+	  qrsTypes[n*3+2] = 49; //'s';
+      }
+    }
+  }
+  
+  free(buff);
+  /////////////////get q,r,s peaks//////////////////////////////////////////////////////////
+  
+  
+  
+  
+  
+  
+  ///////////////////////// complete annotation array///////////////////////////////////////
+  maNum = 0;
+  
+  //Pwave vec size = Twave vec size
+  annNum = Pwaves * 3 + qrsnum * 2 + peaksnum + Twaves * 3 + (int)MA.size();   //P1 P P2 [QRS] T1 T T2  noise annotation
+  if (annNum > qrsnum)                        //42-(p 43-p) 24-Pwave
+    {                                           //44-(t 45-t) 27-Twave
+      ANN = new int*[annNum];                    // [samps] [type] [?aux data]
+      for (int i = 0; i < annNum; i++)
+	ANN[i] = new int[3];
+      
+      int index = 0; //index to ANN
+      int qindex = 0;  //index to qrsANN
+      
+      for (int i = 0; i < (int)Twave.size(); i += 3) {   //Twave=Pwaves=qrsPeaks size
+	//QRS complex
+	ANN[index][0] = ann[qindex][0];           //(QRS
+	ANN[index][1] = ann[qindex][1];           //
+	ANN[index++][2] = ann[qindex++][2];       //aux
+	if (qrsPeaks[i]) { //q
+	  ANN[index][0] = qrsPeaks[i];
+	  ANN[index][1] = qrsTypes[i];
+	  ANN[index++][2] = -1;              //no aux
+	}
+	if (qrsPeaks[i+1]) { //r
+	  ANN[index][0] = qrsPeaks[i+1];
+	  ANN[index][1] = qrsTypes[i+1];
+	  ANN[index++][2] = -1;              //no aux
+	}
+	if (qrsPeaks[i+2]) { //s
+	  ANN[index][0] = qrsPeaks[i+2];
+	  ANN[index][1] = qrsTypes[i+2];
+	  ANN[index++][2] = -1;              //no aux
+	}
+	ANN[index][0] = ann[qindex][0];           //QRS)
+	ANN[index][1] = ann[qindex][1];           //
+	ANN[index++][2] = ann[qindex++][2];       //aux
+	
+	//T wave
+	if (Twave[i]) {
+	  ANN[index][0] = Twave[i];                //(t
+	  ANN[index][1] = 44;
+	  ANN[index++][2] = -1;                    //no aux
+	  ANN[index][0] = Twave[i+1];              //T
+	  ANN[index][1] = 27;
+	  ANN[index++][2] = -1;                    //no aux
+	  ANN[index][0] = Twave[i+2];              //t)
+	  ANN[index][1] = 45;
+	  ANN[index++][2] = -1;                    //no aux
+	}
+	//P wave
+	if (Pwave[i]) {
+	  ANN[index][0] = Pwave[i];                //(t
+	  ANN[index][1] = 42;
+	  ANN[index++][2] = -1;                    //no aux
+	  ANN[index][0] = Pwave[i+1];              //T
+	  ANN[index][1] = 24;
+	  ANN[index++][2] = -1;                    //no aux
+	  ANN[index][0] = Pwave[i+2];              //t)
+	  ANN[index][1] = 43;
+	  ANN[index++][2] = -1;                    //no aux
+	}
+	
+	if (!Twave[i] && !Pwave[i]) {          //check for MA noise
+	  for (int m = maNum; m < (int)MA.size(); m++) {
+	    if (MA[m] > ann[qindex-1][0] && MA[m] < ann[qindex][0]) {
+	      ANN[index][0] = MA[m];      //Noise
+	      ANN[index][1] = 14;
+	      ANN[index++][2] = -1;       //no aux
+	      maNum++;
+	      break;
+	    }
+	  }
+	}
+      }
+      
+      //last QRS complex
+      int ii = 3 * (qrsnum - 1);
+      ANN[index][0] = ann[qindex][0];           //(QRS
+      ANN[index][1] = ann[qindex][1];           //
+      ANN[index++][2] = ann[qindex++][2];       //aux
+      if (qrsPeaks[ii]) { //q
+	ANN[index][0] = qrsPeaks[ii];
+	ANN[index][1] = qrsTypes[ii];
+	ANN[index++][2] = -1;              //no aux
+      }
+      if (qrsPeaks[ii+1]) { //r
+	ANN[index][0] = qrsPeaks[ii+1];
+	ANN[index][1] = qrsTypes[ii+1];
+	ANN[index++][2] = -1;              //no aux
+      }
+      if (qrsPeaks[ii+2]) { //s
+	ANN[index][0] = qrsPeaks[ii+2];
+	ANN[index][1] = qrsTypes[ii+2];
+	ANN[index++][2] = -1;              //no aux
+      }
+      ANN[index][0] = ann[qindex][0];           //QRS)
+      ANN[index][1] = ann[qindex][1];           //
+      ANN[index++][2] = ann[qindex++][2];       //aux
+      
+      //check if noise after last qrs
+      if (maNum < (int)MA.size()) {
+	if (MA[maNum] > ann[qindex-1][0]) {
+	  ANN[index][0] = MA[maNum];      //Noise
+	  ANN[index][1] = 14;
+	  ANN[index++][2] = -1;
+	}
+      }
+      
+      return ANN;
+    } else
+    return 0;
 }
 //-----------------------------------------------------------------------------
 
