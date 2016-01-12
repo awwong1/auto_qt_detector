@@ -170,7 +170,9 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
     {                                           //          1: N    -1: nodata in **AUX
       qrsANN = new int*[2*qrsNum];                    // [samps] [type] [?aux data]
       for (int i = 0; i < 2*qrsNum; i++)
-	qrsANN[i] = new int[3];
+	{
+	  qrsANN[i] = new int[3];  // TODO: delete[] somewhere
+	}
       
       for (int i = 0; i < 2*qrsNum; i++) {
 	qrsANN[i][0] = QRS[i];                                     //samp
