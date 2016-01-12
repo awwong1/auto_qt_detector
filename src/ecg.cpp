@@ -121,7 +121,8 @@ int main(int argc, char* argv[])  // no unicode args
 	  msec = int(((double)smpl / sr) * 1000.0);
 	  signal.mSecToTime(msec, h, m, s, ms);
 	  
-	  wprintf(L"%10d %02d:%02d:%02d.%03d   %s\n", smpl, h, m, s, ms, anncodes[type]);
+	  wprintf(L"%10d %02d:%02d:%02d.%03d   %S\n", smpl, h, m, s, ms, anncodes[type]);
+	  //wprintf(L"%10d %02d:%02d:%02d.%03d   %i\n", smpl, h, m, s, ms, type);  // debugging
 	}
 	
 	//saving RR seq
