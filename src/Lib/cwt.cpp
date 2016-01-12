@@ -110,10 +110,15 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
 
         filesize = sizeof(float) * filesize + sizeof(CWTHDR);
 
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, name, sizeof(buffer) );
+	
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	// fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	fp = fopen( buffer, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return 0; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize, 0);
@@ -131,10 +136,15 @@ float* CWT::CwtCreateFileHeader(wchar_t *name, PCWTHDR hdr, enum WAVELET wavelet
 
 float* CWT::CwtReadFile(const wchar_t *name)
 {
+  // Convert name to char* for fopen():
+  char buffer[PATH_MAX];
+  wcstombs(buffer, name, sizeof(buffer) );
+
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return 0;
-        fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
+        // fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
+        fp = fopen( buffer, "r+" );  // TODO: use open() instead?
 	if(fp == NULL) { return 0; }
 
 	// fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);

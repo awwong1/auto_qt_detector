@@ -78,7 +78,8 @@ int main(int argc, char* argv[])  // no unicode args
       class EcgAnnotation ann;  //default annotation params
       if (argc >= 3 + 1) {
 	//wcscpy_s(params, _MAX_PATH, argv[3]);
-	wcscpy(params, (const wchar_t*)argv[3] );
+	//wcscpy(params, (const wchar_t*)argv[3] );
+	mbstowcs( params, argv[3], PATH_MAX );
 	parse_params(ann);
       }                                                
       
@@ -99,10 +100,12 @@ int main(int argc, char* argv[])  // no unicode args
 	  //toc();
 	  wprintf(L"\n");
 	  //save ECG annotation
-	  wcscpy( annName, (const wchar_t*)argv[1] );
+	  //wcscpy( annName, (const wchar_t*)argv[1] );
+	  mbstowcs( annName, argv[1], PATH_MAX );
 	  change_extension(annName, L".atr");
 	  ann.SaveAnnotation(annName, ANN, annNum);
-	} else {
+	}
+	else {
 	  ANN = qrsAnn;
 	  annNum = 2 * ann.GetQrsNumber();
 	  wprintf(L" failed.\n");
@@ -125,10 +128,16 @@ int main(int argc, char* argv[])  // no unicode args
 	vector<double> rrs;
 	vector<int> rrsPos;
 	
-	wcscpy( hrvName, (const wchar_t*)argv[1] );
+	// wcscpy( hrvName, (const wchar_t*)argv[1] );
+	mbstowcs( hrvName, argv[1], PATH_MAX );
 	change_extension(hrvName, L".hrv");
 	if (ann.GetRRseq(ANN, annNum, sr, &rrs, &rrsPos)) {
-	  FILE *fp = fopen((const char*)hrvName, "wt");  // no unicode
+	  // Convert name to char* for fopen():
+	  char buffer[PATH_MAX];
+	  wcstombs(buffer, hrvName, sizeof(buffer) );
+
+	  // FILE *fp = fopen((const char*)hrvName, "wt");  // no unicode
+	  FILE *fp = fopen(buffer, "wt");  // no unicode
 	  for (int i = 0; i < (int)rrs.size(); i++)
 	    fwprintf(fp, L"%lf\n", rrs[i]);
 	  fclose(fp);
@@ -192,7 +201,12 @@ void change_extension(wchar_t* path, const wchar_t* ext)
 
 int parse_params(class EcgAnnotation &ann)
 {
-  FILE* fp = fopen((const char*)params, "rt");  // no unicode
+  // Convert name to char* for fopen():
+  char buffer[PATH_MAX];
+  wcstombs(buffer, params, sizeof(buffer) );
+
+  // FILE* fp = fopen((const char*)params, "rt");  // no unicode
+  FILE* fp = fopen(buffer, "rt");  // no unicode
         if (fp != 0) {
                 ANNHDR hdr;
                 int res = 0;

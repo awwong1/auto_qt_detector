@@ -57,6 +57,8 @@ EcgAnnotation::~EcgAnnotation()
 //
 int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fltdir)
 {
+
+  wprintf(L"sr=%lf\n",sr);  // debugging
   
   double *pdata = (double *)malloc(size * sizeof(double));
   for (int i = 0; i < size; i++) {
@@ -65,9 +67,8 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
   
   
   if (fltdir) {
-    printf("running Filter30hz().\n");  // debugging
     if (Filter30hz(pdata, size, sr, fltdir) == false) { //pdata filed with filterd signal
-      delete[] pdata;  // TODO: mismatched, fix.
+      free(pdata);
       return 0;
     }
     
@@ -159,8 +160,7 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
   }
   /////////////////////////////////////////////////////////////////////////////
 
-  printf("free()ing pdata.\n");  // debugging
-  delete[] pdata;
+  free(pdata);
   
   
   
@@ -193,8 +193,6 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
 
 bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdir) const
 {
-  
-  printf("in 30hz fn.\n");  // debugging
 
   CWT cwt;
   ///////////CWT 10Hz transform//////////////////////////////////////////
@@ -231,6 +229,9 @@ bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdi
   }
 
   int J = ceil(log2(sr / 23.0)) - 2;
+
+  wprintf(L"sr=%lf, J=%i\n",sr,J);  // debugging
+  
   //trans///////////////////////////////////////////////////
   fwt.FwtTrans(J);
 
@@ -842,7 +843,13 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, name, sizeof(buffer) );
+
+	// fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	fp = fopen( buffer, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
 	int fp_int = fileno(fp);
 

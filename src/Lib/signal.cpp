@@ -39,15 +39,15 @@ double* Signal::ReadFile(const wchar_t* name)
     return 0;
   }
   
-  printf("file is valid.\n");  // debugging
+  wprintf(L"file is valid.\n");  // debugging
   
   if (IsBinFile) {
     if (!ReadDatFile()) { return 0; }
   }
   else {
-    printf("reading as non-binfile.\n");  // debugging
+    wprintf(L"reading as non-binfile.\n");  // debugging
     if (!ReadTxtFile()) { //read text file
-      printf("reading as mit-bih file.\n");  // debugging
+      wprintf(L"reading as mit-bih file.\n");  // debugging
       if (!ReadMitbihFile()) //read mit-bih file
 	{ return 0; }
     }
@@ -106,7 +106,13 @@ bool Signal::ReadDatFile()
         // fp = CreateFileW(EcgFileName, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-        fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?  and do char conversion.
+
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, EcgFileName, sizeof(buffer) );
+
+	// fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?  and do char conversion.
+	fp = fopen( buffer, "r" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
@@ -179,9 +185,14 @@ bool Signal::ReadTxtFile()
         double tmp;
         int res;
 
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, EcgFileName, sizeof(buffer) );
+	
         // if ((in = _wfopen(EcgFileName, L"rt")) == 0)
-        if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode.  TODO: char conversion.
-                return false;
+        // if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode.  TODO: char conversion.
+        if ((in = fopen( buffer, "rt" )) == 0)  // no unicode.
+	  { return false; }
 
         for (;;) {
                 res = fscanf(in, "%lf", &tmp);
@@ -213,7 +224,7 @@ bool Signal::ReadTxtFile()
 
 bool Signal::ReadMitbihFile()
 {
-  printf("reading mit file...\n");  // debugging
+  wprintf(L"reading mit file...\n");  // debugging
 
   wchar_t HeaFile[_MAX_PATH];
   wcscpy(HeaFile, EcgFileName);
@@ -229,13 +240,9 @@ bool Signal::ReadMitbihFile()
   FILE* fh = fopen( buffer, "rt" );  // no unicode
   if (!fh) { return false; }
   
-  printf("read header.\n");  // debugging
-
   if (ParseMitbihHeader(fh)) {
     fclose(fh);
 
-    printf("reading rest of file...\n");  // debugging
-    
     pEcgHeader = &EcgHeaders[0];
     int lNum = (int)EcgHeaders.size();
     int size = pEcgHeader->size;
@@ -275,7 +282,7 @@ bool Signal::ReadMitbihFile()
       EcgSignals.push_back(pData);
     }
     
-    printf("starting loop.  s=%i, n=%i.\n", size, lNum);  // debugging
+    wprintf(L"starting loop.  s=%i, n=%i.\n", size, lNum);  // debugging
 
     short tmp;
     for (int s = 0; s < size; s++) {
@@ -439,11 +446,15 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
                 break;
         }
 
+	// Convert name to char* for fopen():
+	char fn_buffer[PATH_MAX];
+	wcstombs(fn_buffer, name, sizeof(fn_buffer) );
 
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-        fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?  and do char conversion.
+        // fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?  and do char conversion.
+        fp = fopen( fn_buffer, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(DATAHDR), 0);
@@ -507,16 +518,22 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
 
 bool Signal::ToTxt(const wchar_t* name, const double* buffer, int size)
 {
-        // in = _wfopen(name, L"wt");
-        in = fopen( (const char*)name, "wt" );  // no unicode.  TODO: char conversion.
-        if (in) {
-                for (int i = 0; i < size; i++)
-                        fwprintf(in, L"%lf\n", buffer[i]);
-
-                fclose(in);
-                return true;
-        } else
-                return false;
+  // Convert name to char* for fopen():
+  char fn_buffer[PATH_MAX];
+  wcstombs(fn_buffer, name, sizeof(fn_buffer) );
+  
+  // in = _wfopen(name, L"wt");
+  // in = fopen( (const char*)name, "wt" );  // no unicode.  TODO: char conversion.
+  in = fopen( fn_buffer, "wt" );  // no unicode.
+  if (in) {
+    for (int i = 0; i < size; i++)
+      fwprintf(in, L"%lf\n", buffer[i]);
+    
+    fclose(in);
+    return true;
+  }
+  else
+    { return false; }
 }
 
 void Signal::ChangeExtension(wchar_t* path, const wchar_t* ext) const

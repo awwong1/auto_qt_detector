@@ -209,7 +209,11 @@ int* FWT::GetJnumbs(int j, int size)
 {
         if (Jnumbs) delete[] Jnumbs;
 
+	wprintf(L"Initializing Jnumbs with j=%i...\n", j);  // debugging
+	
         Jnumbs = new int[j];
+
+	wprintf(L"Initialized Jnumbs.\n");  // debugging
 
         for (int i = 0; i < j; i++)
                 Jnumbs[i] = size / (int)pow(2, (double)(j - i));
@@ -257,7 +261,13 @@ bool FWT::FwtSaveFile(const wchar_t *name, const double *hipass, const double *l
         //         fp = 0;
         //         return false;
         // }
-	fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, name, sizeof(buffer) );
+
+	// fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
+	fp = fopen( buffer, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { fp = 0; return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, filesize + sizeof(FWTHDR), 0);
@@ -322,7 +332,13 @@ bool FWT::FwtReadFile(const wchar_t *name, const char *appdir)
         //         fp = 0;
         //         return false;
         // }
-        fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
+
+	// Convert name to char* for fopen():
+	char buffer[PATH_MAX];
+	wcstombs(buffer, name, sizeof(buffer) );
+	
+	// fp = fopen( (const char*)name, "r+" );  // TODO: use open() instead?
+	fp = fopen( buffer, "r+" );  // TODO: use open() instead?
 	if(fp == NULL) { fp = 0; return false; }
 
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
