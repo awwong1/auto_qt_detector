@@ -58,7 +58,7 @@ EcgAnnotation::~EcgAnnotation()
 int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fltdir)
 {
 
-  wprintf(L"sr=%lf\n",sr);  // debugging
+  //wprintf(L"sr=%lf\n",sr);  // debugging
   
   double *pdata = (double *)malloc(size * sizeof(double));
   for (int i = 0; i < size; i++) {
@@ -232,7 +232,7 @@ bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdi
 
   int J = ceil(log2(sr / 23.0)) - 2;
 
-  wprintf(L"sr=%lf, J=%i\n",sr,J);  // debugging
+  //wprintf(L"sr=%lf, J=%i\n",sr,J);  // debugging
   
   //trans///////////////////////////////////////////////////
   fwt.FwtTrans(J);

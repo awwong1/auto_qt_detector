@@ -143,7 +143,7 @@ int main(int argc, char* argv[])  // no unicode args
 	    fwprintf(fp, L"%lf\n", rrs[i]);
 	  fclose(fp);
 	  
-	  wprintf(L"\n mean heart rate: %.2lf", signal.Mean(&rrs[0], (int)rrs.size()));
+	  wprintf(L"\n mean heart rate: %.2lf\n", signal.Mean(&rrs[0], (int)rrs.size()));
 	}
 	
       }

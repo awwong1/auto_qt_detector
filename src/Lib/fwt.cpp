@@ -209,11 +209,11 @@ int* FWT::GetJnumbs(int j, int size)
 {
         if (Jnumbs) delete[] Jnumbs;
 
-	wprintf(L"Initializing Jnumbs with j=%i...\n", j);  // debugging
+	//wprintf(L"Initializing Jnumbs with j=%i...\n", j);  // debugging
 	
         Jnumbs = new int[j];
 
-	wprintf(L"Initialized Jnumbs.\n");  // debugging
+	//wprintf(L"Initialized Jnumbs.\n");  // debugging
 
         for (int i = 0; i < j; i++)
                 Jnumbs[i] = size / (int)pow(2, (double)(j - i));

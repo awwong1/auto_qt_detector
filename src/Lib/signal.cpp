@@ -39,15 +39,15 @@ double* Signal::ReadFile(const wchar_t* name)
     return 0;
   }
   
-  wprintf(L"file is valid.\n");  // debugging
+  //wprintf(L"file is valid.\n");  // debugging
   
   if (IsBinFile) {
     if (!ReadDatFile()) { return 0; }  // TODO: need to fix ReadDatFile() before using
   }
   else {
-    wprintf(L"reading as non-binfile.\n");  // debugging
+    //wprintf(L"reading as non-binfile.\n");  // debugging
     if (!ReadTxtFile()) { //read text file
-      wprintf(L"reading as mit-bih file.\n");  // debugging
+      //wprintf(L"reading as mit-bih file.\n");  // debugging
       if (!ReadMitbihFile()) //read mit-bih file
 	{ return 0; }
     }
@@ -224,7 +224,7 @@ bool Signal::ReadTxtFile()
 
 bool Signal::ReadMitbihFile()
 {
-  wprintf(L"reading mit file...\n");  // debugging
+  //wprintf(L"reading mit file...\n");  // debugging
 
   wchar_t HeaFile[_MAX_PATH];
   wcscpy(HeaFile, EcgFileName);
@@ -282,7 +282,7 @@ bool Signal::ReadMitbihFile()
       EcgSignals.push_back(pData);
     }
     
-    wprintf(L"starting loop.  s=%i, n=%i.\n", size, lNum);  // debugging
+    //wprintf(L"starting loop.  s=%i, n=%i.\n", size, lNum);  // debugging
 
     short tmp;
     for (int s = 0; s < size; s++) {
