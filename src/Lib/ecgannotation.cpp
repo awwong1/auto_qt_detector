@@ -163,7 +163,6 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
   free(pdata);
   
   
-  
   qrsNum = QRS.size() / 2;
   
   if (qrsNum > 0)                              //         46: ?
@@ -189,8 +188,8 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
       }
       
       return qrsANN;
-    } else
-    return 0;
+    }
+  else { return 0; }
 }
 
 bool EcgAnnotation::Filter30hz(double *data, int size, double sr, wchar_t *fltdir) const
@@ -683,12 +682,13 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
                                         qrsTypes[n*3] = 15; //'q';
                         }
                         if (R != -1) {
-                                peaksnum++;
-                                qrsPeaks[n*3+1] = R;
-                                if (fabs(buff[R]) > 0.5)
-                                        qrsTypes[n*3+1] = 48; //'R';
-                                else
-                                        qrsTypes[n*3+1] = 47; //'r';
+			  printf("found 'R'.\n");  // debugging
+			  peaksnum++;
+			  qrsPeaks[n*3+1] = R;
+			  if (fabs(buff[R]) > 0.5)
+			    { qrsTypes[n*3+1] = 48; } //'R';
+			  else
+			    { qrsTypes[n*3+1] = 47; } //'r';
                         }
                         if (S != -1) {
                                 peaksnum++;
