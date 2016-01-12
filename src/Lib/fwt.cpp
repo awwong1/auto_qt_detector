@@ -344,7 +344,7 @@ bool FWT::FwtReadFile(const wchar_t *name, const char *appdir)
         // fpmap = CreateFileMapping(fp, 0, PAGE_READWRITE, 0, 0, 0);
         // lpMap = MapViewOfFile(fpmap, FILE_MAP_WRITE, 0, 0, 0);
 	int fp_int = fileno(fp);
-	lpMap = mmap(NULL, 0, (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);
+	lpMap = mmap(NULL, 0, (PROT_READ | PROT_WRITE), MAP_SHARED, fp_int, 0);  // TODO: size
 	
         phdr = (PFWTHDR)lpMap;
         lpf = (float *)lpMap;

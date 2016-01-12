@@ -42,7 +42,7 @@ double* Signal::ReadFile(const wchar_t* name)
   wprintf(L"file is valid.\n");  // debugging
   
   if (IsBinFile) {
-    if (!ReadDatFile()) { return 0; }
+    if (!ReadDatFile()) { return 0; }  // TODO: need to fix ReadDatFile() before using
   }
   else {
     wprintf(L"reading as non-binfile.\n");  // debugging
@@ -118,7 +118,7 @@ bool Signal::ReadDatFile()
         // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, 0, 0);
         // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, 0);
 	int fp_int = fileno(fp);
-	lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);
+	lpMap = mmap(NULL, 0, PROT_READ, MAP_SHARED, fp_int, 0);  // TODO: sizeof(PDATAHDR or DATAHDR) + Length*Bits/8
 
         if (lpMap == 0) {  // TODO: should be checking mmap() == MAP_FAILED on
 			   //       all of these, and also make sure we munmap()
