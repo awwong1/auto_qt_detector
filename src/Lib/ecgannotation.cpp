@@ -606,7 +606,7 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
   if (enoise.LFDenoise()) {
     //ToTxt(L"f.txt",buff,length);
     double *pbuff;
-    wprintf(L"starting 0->qrsnum loop...\n");  // debugging
+    //wprintf(L"starting 0->qrsnum loop...\n");  // debugging
     for (int n = 0; n < qrsnum; n++) {
       annPos = ann[n*2][0];   //PQ
       size = ann[n*2+1][0] - ann[n*2][0] + 1; //PQ-Jpnt, including Jpnt
@@ -676,7 +676,7 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
 	}
       }
       if (Q != -1) {
-	wprintf(L"found 'Q'.\n");  // debugging
+	//wprintf(L"found 'Q'.\n");  // debugging
 	peaksnum++;
 	qrsPeaks[n*3] = Q;
 	if (fabs(buff[Q]) > 0.5)
@@ -685,7 +685,7 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
 	  qrsTypes[n*3] = 15; //'q';
       }
       if (R != -1) {
-	wprintf(L"found 'R'.\n");  // debugging
+	//wprintf(L"found 'R'.\n");  // debugging
 	peaksnum++;
 	qrsPeaks[n*3+1] = R;
 	if (fabs(buff[R]) > 0.5)
@@ -694,7 +694,7 @@ int** EcgAnnotation::GetPTU(const double *data, int length, double sr, wchar_t *
 	  { qrsTypes[n*3+1] = 47; } //'r';
       }
       if (S != -1) {
-	wprintf(L"found 'S'.\n");  // debugging
+	//wprintf(L"found 'S'.\n");  // debugging
 	peaksnum++;
 	qrsPeaks[n*3+2] = S;
 	if (fabs(buff[S]) > 0.5)

@@ -419,7 +419,7 @@ bool FWT::FwtReadFile(const wchar_t *name, const char *appdir)
         if (appdir) { //load filter for synthesis
                 char flt[256];
                 strcpy(flt, appdir);
-                strcat(flt, "\\filters\\");
+                strcat(flt, "/filters/");
                 strcat(flt, FilterName);
                 strcat(flt, ".flt");
 

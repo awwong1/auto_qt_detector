@@ -62,7 +62,7 @@ bool  EcgDenoise::LFDenoise()
         int J = ceil(log2(SR / 0.8)) - 1;
 
         wcscpy(filter, FiltersDir);
-        wcscat(filter, L"\\daub2.flt");
+        wcscat(filter, L"/daub2.flt");
         if (InitFWT(filter, pTmpData, Length + 2*SR) == false)
                 return false;
 
@@ -99,7 +99,7 @@ bool EcgDenoise::HFDenoise()
         int J = ceil(log2(SR / 23.0)) - 2;     //[30Hz - ...] hf denoising
 
         wcscpy(filter, FiltersDir);
-        wcscat(filter, L"\\bior97.flt");
+        wcscat(filter, L"/bior97.flt");
         if (InitFWT(filter, pTmpData, Length + 2*SR) == false)
                 return false;
 
@@ -148,7 +148,7 @@ bool EcgDenoise::LFHFDenoise()
         J = ceil(log2(SR / 0.8)) - 1;
 
         wcscpy(filter, FiltersDir);
-        wcscat(filter, L"\\daub2.flt");
+        wcscat(filter, L"/daub2.flt");
         if (InitFWT(filter, pTmpData, Length + 2*SR) == false)
                 return false;
 
@@ -181,7 +181,7 @@ bool EcgDenoise::LFHFDenoise()
         J = ceil(log2(SR / 23.0)) - 2;     //[30Hz - ...] hf denoising
 
         wcscpy(filter, FiltersDir);
-        wcscat(filter, L"\\bior97.flt");
+        wcscat(filter, L"/bior97.flt");
         if (InitFWT(filter, pTmpData, Length + 2*SR) == false)
                 return false;
 
