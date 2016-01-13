@@ -105,7 +105,8 @@ private:
         const Signal& operator=(const Signal& Signal);
 
 
-        bool IsBinFile;                         //binary or text file
+        bool IsDat;                         //dat file
+        bool IsISHNE;                         //ISHNE file
         wchar_t EcgFileName[_MAX_PATH];         //file name
 
         PDATAHDR pEcgHeader;                    //pointer to ECG data header
@@ -116,6 +117,7 @@ private:
         bool ReadTxtFile();                     //read text file data
         bool ReadMitbihFile();                  //read mit-bih dat file
         int ParseMitbihHeader(FILE* fh);        //parse mit-bih header
+        bool ReadIshneFile();                   //read ISHNE file
         
         void ChangeExtension(wchar_t* path, const wchar_t* ext) const;
         int ReadLine(FILE* fh, char* buffer) const;

@@ -3,6 +3,7 @@
 #include "../stdafx.h"
 #include "signal.h"
 #include <string.h>
+#include "ishne.h"
 
 Signal::Signal(): pData(0), fp(0), fpmap(0), lpMap(0),
                   SR(0.0), Bits(0), UmV(0), Lead(0), Length(0),
@@ -35,22 +36,24 @@ double* Signal::ReadFile(const wchar_t* name)
   wcscpy(EcgFileName, name);
   
   if (!IsFileValid(name)) {
-    fprintf(stderr, "Invalid file name.\n");
+    fprintf(stderr, "Invalid file.\n");
     return 0;
   }
   
   //wprintf(L"file is valid.\n");  // debugging
   
-  if (IsBinFile) {
+  if (IsDat) {
     if (!ReadDatFile()) { return 0; }  // TODO: need to fix ReadDatFile() before using
   }
+  else if (IsISHNE) {
+    if (!ReadIshneFile()) { return 0; }
+  }
   else {
-    //wprintf(L"reading as non-binfile.\n");  // debugging
-    if (!ReadTxtFile()) { //read text file
-      //wprintf(L"reading as mit-bih file.\n");  // debugging
-      if (!ReadMitbihFile()) //read mit-bih file
-	{ return 0; }
-    }
+    if (!ReadTxtFile())  // try to read as text file
+      {
+	if (!ReadMitbihFile())  // else, read as mit-bih file
+	  { return 0; }
+      }
   }
   
   return GetData();
@@ -61,26 +64,71 @@ bool Signal::IsFileValid(const wchar_t* name)
   // fp = CreateFileW(name, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   // if (fp == INVALID_HANDLE_VALUE)
   //         return false;
-
+  
+  IsISHNE = false;
+  IsDat = false;
+  
   // Convert name to char* for fopen():
   char buffer[PATH_MAX];
   wcstombs(buffer, name, sizeof(buffer) );
-
+  
   fp = fopen( buffer, "r" );  // TODO: use open() instead?
   if(fp == NULL) { return false; }
-
+  
   // fpmap = CreateFileMapping(fp, 0, PAGE_READONLY, 0, sizeof(DATAHDR), 0);
   // lpMap = MapViewOfFile(fpmap, FILE_MAP_READ, 0, 0, sizeof(DATAHDR));
   int fp_int = fileno(fp);
   lpMap = mmap(NULL, sizeof(DATAHDR), PROT_READ, MAP_SHARED, fp_int, 0);
-
+  if(lpMap == 0) { return false; }
+  
   pEcgHeader = (PDATAHDR)lpMap;
   
   //printf("lpmap = %i\n", lpMap);  // debugging
-
+  
   //printf("header = %s\n", pEcgHeader->hdr);  // debugging
+  
+  if(!memcmp(pEcgHeader->hdr,"ISHNE1.0",8))  // kind of improper, and requires sizeof(DATAHDR) >= 8
+    {
+      IsISHNE = true;
+      
+      // Find file size:
+      long file_size;
+      fseek(fp, 0, SEEK_END);
+      file_size = ftell(fp);
+      // rewind(fp);
+      // fprintf( stderr, "filesize = %li.\n", file_size );  // debugging
+      
+      CloseFile(sizeof(DATAHDR));  // because readIshneHeader() is going to open it (and close it)
+      ISHNEHeader m_ISHNEHeader = readIshneHeader(buffer);
+      
+      // If header reports total number of samples:
+      //     Len = m_ISHNEHeader.Sample_Size_ECG / m_ISHNEHeader.nLeads;
+      // If header reports number of samples for a single lead:
+      //     Len = m_ISHNEHeader.Sample_Size_ECG;
+      // I've found that ISHNE file headers can do either one, or just be
+      // completely wrong.  So we'll ignore what the header says, and figure it
+      // out on our own:
+      Length = (file_size - m_ISHNEHeader.Offset_ECG_block) / m_ISHNEHeader.nLeads / 2;
+      // Note that doing it this way and discarding the Sample Size reported by
+      // the header mostly eliminates the ability to check for incorrect file
+      // size.
 
-  if (lpMap != 0 && !memcmp(pEcgHeader->hdr, "DATA", 4)) {
+      // fprintf( stderr, "Len = %i.\n", Len );  // debugging
+      // fprintf( stderr, "Offset_ECG_block = %i.\n", m_ISHNEHeader.Offset_ECG_block );  // debugging
+      // fprintf( stderr, "nLeads = %i.\n", m_ISHNEHeader.nLeads );  // debugging
+      // fprintf( stderr, "reported nSamples = %i.\n", m_ISHNEHeader.Sample_Size_ECG );  // debugging
+      
+      SR = m_ISHNEHeader.Sampling_Rate;
+      Bits = 16;
+      UmV = 1000000 / m_ISHNEHeader.Resolution[0]; // TODO: set separately for each lead
+      hh = m_ISHNEHeader.Start_Time[0];
+      mm = m_ISHNEHeader.Start_Time[1];
+      ss = m_ISHNEHeader.Start_Time[2];
+      // TODO: Lead?
+      
+      return true;
+    }
+  else if ( !memcmp(pEcgHeader->hdr, "DATA", 4) ) {
     Length = pEcgHeader->size;
     SR = pEcgHeader->sr;
     Bits = pEcgHeader->bits;
@@ -89,10 +137,7 @@ bool Signal::IsFileValid(const wchar_t* name)
     hh = pEcgHeader->hh;
     mm = pEcgHeader->mm;
     ss = pEcgHeader->ss;
-    IsBinFile = true;
-  }
-  else {
-    IsBinFile = false;
+    IsDat = true;
   }
 
   CloseFile(sizeof(DATAHDR));
@@ -220,6 +265,50 @@ bool Signal::ReadTxtFile()
         EcgHeaders.push_back(hdr);
 
         return true;
+}
+
+bool Signal::ReadIshneFile() {
+  // TODO: Redo/Verify all of this
+
+  ISHNEHeader m_ISHNEHeader = readIshneHeader(fname);
+  ISHNEData m_ISHNEData = readIshneECG(fname);
+
+  // TODO: return false if one of those fails
+
+  // Len = m_ISHNEHeader.Sample_Size_ECG;  // already prepped by GetInfo()
+  if(Len < 2)
+    return false;
+
+  // For each lead...:
+  for(int i=0; i<m_ISHNEHeader.nLeads; i++)
+    {
+      // Push the data for this lead onto vdata:
+      data = new long double[Len];
+      for(int j=0; j<Len; j++)
+	{
+	  data[j] = m_ISHNEData.data[i][j];
+	  // do this instead?  looks like no :
+	  // data[j] = (long double)m_ISHNEData.data[i][j] / (long double)UmV;
+	}
+      vdata.push_back(data);
+
+      // Push the header for this lead onto hdrs.  (Note that hdr.lead is the
+      // only thing that changes for each lead.):
+      DATAHDR hdr;
+      memset(&hdr,0,sizeof(DATAHDR));
+      hdr.size  = Len;  // m_ISHNEHeader.Sample_Size_ECG
+      hdr.sr    = SR;   // m_ISHNEHeader.Sampling_Rate
+      hdr.umv   = UmV;  // e.g. 100 or 2000
+      hdr.bits  = Bits; // 16
+      hdr.hh    = hh;   // m_ISHNEHeader.Start_Time[0]
+      hdr.mm    = mm;   // m_ISHNEHeader.Start_Time[1]
+      hdr.ss    = ss;   // m_ISHNEHeader.Start_Time[2]
+      hdr.lead  = i;    // arbitrary; doesn't seem to be used by anything
+      hdr.bline = 0;    // ... I guess.
+      hdrs.push_back(hdr);
+    }
+
+  return true;
 }
 
 bool Signal::ReadMitbihFile()
