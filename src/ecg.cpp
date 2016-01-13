@@ -26,7 +26,7 @@ University Chemical Laboratory, Cambridge University, Lensfield Road, Cambridge,
 
 
 #include "stdafx.h"
-#include "Lib/lib.h"
+#include "lib/lib.h"
 #include <cstring>
 // #include <stdio.h>
 // #include <string>
