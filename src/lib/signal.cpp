@@ -415,14 +415,14 @@ bool Signal::ReadMitbihFile()
   }
 }
 
-double* Signal::GetData(int index)
+double* Signal::GetData(int index)  // index = which lead
 {
         if (!EcgSignals.size())
-                return 0;
+	  { return 0; }
         if (index > (int)EcgSignals.size() - 1)
-                index = (int)EcgSignals.size() - 1;
+	  { index = (int)EcgSignals.size() - 1; }
         else if (index < 0)
-                index = 0;
+	  { index = 0; }
 
         pEcgHeader = &EcgHeaders[index];
         pData = EcgSignals[index];

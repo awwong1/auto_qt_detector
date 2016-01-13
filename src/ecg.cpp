@@ -21,9 +21,8 @@ int main(int argc, char* argv[])  // no unicode args
   wchar_t annName[_MAX_PATH];
   wchar_t hrvName[_MAX_PATH];
 
-  if (argc < 2) {
-    help();
-  } else {
+  if (argc < 2) { help(); }
+  else {
     int leadNumber = 0;
     if (argc >= 2 + 1) {
       wchar_t *end;  // NULL
