@@ -166,7 +166,7 @@ int main(int argc, char* argv[])  // no unicode args
 void help()
 {
         wprintf(L"usage: ecg.exe physionetfile.dat [LeadNumber] [params]\n");
-        wprintf(L"       do not forget about \\filters dir to be present.");
+        wprintf(L"       do not forget about \\filters dir to be present.\n");
 }
 
 // static LARGE_INTEGER m_nFreq;

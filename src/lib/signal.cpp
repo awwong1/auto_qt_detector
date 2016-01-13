@@ -270,33 +270,35 @@ bool Signal::ReadTxtFile()
 bool Signal::ReadIshneFile() {
   // TODO: Redo/Verify all of this
 
+  // Convert file name to char*:
+  char fname[PATH_MAX];
+  wcstombs(fname, EcgFileName, sizeof(fname) );
+  
   ISHNEHeader m_ISHNEHeader = readIshneHeader(fname);
   ISHNEData m_ISHNEData = readIshneECG(fname);
-
   // TODO: return false if one of those fails
 
-  // Len = m_ISHNEHeader.Sample_Size_ECG;  // already prepped by GetInfo()
-  if(Len < 2)
-    return false;
+  // Length = m_ISHNEHeader.Sample_Size_ECG;  // already prepped by IsFileValid()
+  if (Length < 2) { return false; }
 
   // For each lead...:
   for(int i=0; i<m_ISHNEHeader.nLeads; i++)
     {
-      // Push the data for this lead onto vdata:
-      data = new long double[Len];
-      for(int j=0; j<Len; j++)
+      // Push the data for this lead onto EcgSignals:
+      pData = new double[Length];
+      for(int j=0; j<Length; j++)
 	{
-	  data[j] = m_ISHNEData.data[i][j];
+	  pData[j] = m_ISHNEData.data[i][j];
 	  // do this instead?  looks like no :
 	  // data[j] = (long double)m_ISHNEData.data[i][j] / (long double)UmV;
 	}
-      vdata.push_back(data);
+      EcgSignals.push_back(pData);
 
-      // Push the header for this lead onto hdrs.  (Note that hdr.lead is the
+      // Push the header for this lead onto EcgHeaders.  (Note that EcgHeaders.lead is the
       // only thing that changes for each lead.):
       DATAHDR hdr;
       memset(&hdr,0,sizeof(DATAHDR));
-      hdr.size  = Len;  // m_ISHNEHeader.Sample_Size_ECG
+      hdr.size  = Length;  // m_ISHNEHeader.Sample_Size_ECG
       hdr.sr    = SR;   // m_ISHNEHeader.Sampling_Rate
       hdr.umv   = UmV;  // e.g. 100 or 2000
       hdr.bits  = Bits; // 16
@@ -305,7 +307,7 @@ bool Signal::ReadIshneFile() {
       hdr.ss    = ss;   // m_ISHNEHeader.Start_Time[2]
       hdr.lead  = i;    // arbitrary; doesn't seem to be used by anything
       hdr.bline = 0;    // ... I guess.
-      hdrs.push_back(hdr);
+      EcgHeaders.push_back(hdr);
     }
 
   return true;
