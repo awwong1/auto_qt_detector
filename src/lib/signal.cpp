@@ -128,18 +128,19 @@ bool Signal::IsFileValid(const wchar_t* name)
       
       return true;
     }
-  else if ( !memcmp(pEcgHeader->hdr, "DATA", 4) ) {
-    Length = pEcgHeader->size;
-    SR = pEcgHeader->sr;
-    Bits = pEcgHeader->bits;
-    Lead = pEcgHeader->lead;
-    UmV = pEcgHeader->umv;
-    hh = pEcgHeader->hh;
-    mm = pEcgHeader->mm;
-    ss = pEcgHeader->ss;
-    IsDat = true;
-  }
-
+  else if ( !memcmp(pEcgHeader->hdr, "DATA", 4) )
+    {
+      Length = pEcgHeader->size;
+      SR = pEcgHeader->sr;
+      Bits = pEcgHeader->bits;
+      Lead = pEcgHeader->lead;
+      UmV = pEcgHeader->umv;
+      hh = pEcgHeader->hh;
+      mm = pEcgHeader->mm;
+      ss = pEcgHeader->ss;
+      IsDat = true;
+    }
+  
   CloseFile(sizeof(DATAHDR));
   return true;
 }
@@ -156,7 +157,7 @@ bool Signal::ReadDatFile()
 	char buffer[PATH_MAX];
 	wcstombs(buffer, EcgFileName, sizeof(buffer) );
 
-	// fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?  and do char conversion.
+	// fp = fopen( (const char*)EcgFileName, "r" );  // TODO: use open() instead?
 	fp = fopen( buffer, "r" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
 
@@ -235,7 +236,7 @@ bool Signal::ReadTxtFile()
 	wcstombs(buffer, EcgFileName, sizeof(buffer) );
 	
         // if ((in = _wfopen(EcgFileName, L"rt")) == 0)
-        // if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode.  TODO: char conversion.
+        // if ((in = fopen( (const char*)EcgFileName, "rt" )) == 0)  // no unicode.
         if ((in = fopen( buffer, "rt" )) == 0)  // no unicode.
 	  { return false; }
 
@@ -268,8 +269,6 @@ bool Signal::ReadTxtFile()
 }
 
 bool Signal::ReadIshneFile() {
-  // TODO: Redo/Verify all of this
-
   // Convert file name to char*:
   char fname[PATH_MAX];
   wcstombs(fname, EcgFileName, sizeof(fname) );
@@ -544,7 +543,7 @@ bool Signal::SaveFile(const wchar_t* name, const double* buffer, PDATAHDR hdr)
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
         // if (fp == INVALID_HANDLE_VALUE)
         //         return false;
-        // fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?  and do char conversion.
+        // fp = fopen( (const char*)name, "w+" );  // TODO: use open() instead?
         fp = fopen( fn_buffer, "w+" );  // TODO: use open() instead?
 	if(fp == NULL) { return false; }
 
@@ -614,7 +613,7 @@ bool Signal::ToTxt(const wchar_t* name, const double* buffer, int size)
   wcstombs(fn_buffer, name, sizeof(fn_buffer) );
   
   // in = _wfopen(name, L"wt");
-  // in = fopen( (const char*)name, "wt" );  // no unicode.  TODO: char conversion.
+  // in = fopen( (const char*)name, "wt" );  // no unicode.
   in = fopen( fn_buffer, "wt" );  // no unicode.
   if (in) {
     for (int i = 0; i < size; i++)

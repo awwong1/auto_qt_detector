@@ -843,7 +843,7 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
         int samps;
         unsigned short anncode = 0;
         unsigned short type;
-        DWORD bytes;  // TODO: remove
+        //DWORD bytes;  // TODO: remove this variable
         char buff[1024];
 
         // fp = CreateFileW(name, GENERIC_WRITE | GENERIC_READ, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
