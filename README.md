@@ -11,6 +11,8 @@ It was originally very Windows-specific, and I have been working to make it more
 
 ISHNE file support has also been added.
 
+There is an example PhysioNet recording in `data/`.
+
 ### How do I get set up (TODO)? ###
 
 * Summary of set up
@@ -27,7 +29,9 @@ To annotate the first lead from s0010_re.dat:
 Or, explicitly specifying the lead:
     `ecg.exe s0010_re.dat 1`.
 
-The output of the ecg.cpp program is (TODO).  Note that PhysioNet .dat files must also include the .hea header file.
+(Note that PhysioNet .dat files must also include the .hea header file.)
+
+The output of the ecg.cpp program is the list of annotations and the mean heart rate.  Annotations and heart rate information are also saved to disk as .atr and .hrv files alongside the original recording.
 
 ### Who do I talk to? ###
 
