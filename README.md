@@ -11,27 +11,15 @@ It was originally very Windows-specific, and I have been working to make it more
 
 ISHNE file support has also been added.
 
-There is an example PhysioNet recording in `data/`.
-
-### How do I get set up (TODO)? ###
-
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
 ### How do I run it? ###
 
-To annotate the first lead from s0010_re.dat:
-    `ecg.exe s0010_re.dat`.
-Or, explicitly specifying the lead:
-    `ecg.exe s0010_re.dat 1`.
+A simple Makefile is included which builds `ecg.exe`.  The `filters` directory must always accompany this exe.
 
-(Note that PhysioNet .dat files must also include the .hea header file.)
+There is an example PhysioNet recording in `data/`.  To annotate the first lead from s0010_re.dat: `ecg.exe s0010_re.dat`.  Or, explicitly specifying the lead: `ecg.exe s0010_re.dat 1`.  Note that PhysioNet .dat files must also include the .hea header file.
 
 The output of the ecg.cpp program is the list of annotations and the mean heart rate.  Annotations and heart rate information are also saved to disk as .atr and .hrv files alongside the original recording.
+
+You may want to edit the parameters (such as `maxQT`) in `ecgannotation.cpp`.  You can also edit them case-by-case through command-line arguments.
 
 ### Who do I talk to? ###
 
