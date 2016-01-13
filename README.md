@@ -19,7 +19,7 @@ There is an example PhysioNet recording in `data/`.  To annotate the first lead 
 
 The output of the ecg.cpp program is the list of annotations and the mean heart rate.  Annotations and heart rate information are also saved to disk as .atr and .hrv files alongside the original recording.
 
-You may want to edit the parameters (such as `maxQT`) in `ecgannotation.cpp`.  You can also edit them case-by-case through command-line arguments.
+You may want to edit the parameters (such as `maxQT`) in `ecgannotation.cpp`.  You can also edit them case-by-case in a text file, and point to the file with a command-line argument; see `parse_params()` in `ecg.cpp`.
 
 ### Who do I talk to? ###
 
