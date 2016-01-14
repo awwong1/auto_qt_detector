@@ -137,7 +137,6 @@ char anncodes [51][10] =  {"notQRS", "N",       "LBBB",    "RBBB",     "ABERR", 
                            "(p",     "p)",      "(t",      "t)",       "ECT",
                            "r",      "R",       "s",       "S"};
 
-               /*
                   [16] - ARFCT
                   [15] - q
                   [17] - Q
@@ -153,7 +152,8 @@ char anncodes [51][10] =  {"notQRS", "N",       "LBBB",    "RBBB",     "ABERR", 
                   48 - R
                   49 - s
                   50 - S
-                                               */
+
+*/
 
 // Inlines
 inline int EcgAnnotation::GetQrsNumber() const
