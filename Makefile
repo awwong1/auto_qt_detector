@@ -5,3 +5,5 @@ SOURCES=./src/ecg.cpp            ./src/stdafx.cpp            \
 
 ecg.exe	:	$(SOURCES)
 		g++ $^ -o $@
+
+# TODO: watch header files for changes too
