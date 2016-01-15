@@ -7,7 +7,7 @@ The code was downloaded and merged from the following two sources:
 * https://www.physionet.org/challenge/2006/sources/yuriy-chesnokov/
 * http://www.codeproject.com/Articles/20995/ECG-Annotation-C-Library
 
-It was originally very Windows-specific, and I have been working to make it more portable.  It should currently compile and run in Linux, but I will now have to go the other way and get it working in Windows again.
+It was originally very Windows-specific, and I have been working to make it more portable.  It should currently compile and run in Linux and Mac OS, but I will now have to go the other way and get it working in Windows again.
 
 ISHNE file support has also been added.
 
