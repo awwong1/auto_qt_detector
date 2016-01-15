@@ -16,6 +16,36 @@ void help();
 int parse_params(class EcgAnnotation &ann);
 void change_extension(wchar_t* path, const wchar_t* ext);
 
+static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB",     L"ABERR", L"PVC",     //  0-5
+                                      L"FUSION", L"NPC",     L"APC",     L"SVPB",     L"VESC",  L"NESC",    //  6-11
+                                      L"PACE",   L"UNKNOWN", L"NOISE",   L"q",        L"ARFCT", L"Q",       // 12-17
+                                      L"STCH",   L"TCH",     L"SYSTOLE", L"DIASTOLE", L"NOTE",  L"MEASURE", // 18-23
+                                      L"P",      L"BBB",     L"PACESP",  L"T",        L"RTM",   L"U",       // 24-29
+                                      L"LEARN",  L"FLWAV",   L"VFON",    L"VFOFF",    L"AESC",  L"SVESC",   // 30-35
+                                      L"LINK",   L"NAPC",    L"PFUSE",   L"(",        L")",     L"RONT",    // 36-41
+
+          //user defined beats//
+                                      L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",               // 42-46
+                                      L"r",      L"R",       L"s",       L"S"};                             // 47-50
+
+               /*
+                  [16] - ARFCT
+                  [15] - q
+                  [17] - Q
+                  [24] - P
+                  [27] - T
+                  [39, 40] - '(' QRS ')'  PQ, J point
+                  42 - (p Pwave onset
+                  43 - p) Pwave offset
+                  44 - (t Twave onset
+                  45 - t) Twave offset
+                  46 - ect Ectopic of any origin beat
+                  47 - r
+                  48 - R
+                  49 - s
+                  50 - S
+                                               */
+
 int main(int argc, char* argv[])  // no unicode args
 {
   wchar_t annName[_MAX_PATH];

@@ -4,7 +4,7 @@
 //
 
 #pragma once
-#pragma warning(disable : 4996)
+//#pragma warning(disable : 4996)
 
 
 #include <iostream>
@@ -27,17 +27,17 @@
 using namespace std;
 
 
-static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB",     L"ABERR", L"PVC",     //  0-5
-                                      L"FUSION", L"NPC",     L"APC",     L"SVPB",     L"VESC",  L"NESC",    //  6-11
-                                      L"PACE",   L"UNKNOWN", L"NOISE",   L"q",        L"ARFCT", L"Q",       // 12-17
-                                      L"STCH",   L"TCH",     L"SYSTOLE", L"DIASTOLE", L"NOTE",  L"MEASURE", // 18-23
-                                      L"P",      L"BBB",     L"PACESP",  L"T",        L"RTM",   L"U",       // 24-29
-                                      L"LEARN",  L"FLWAV",   L"VFON",    L"VFOFF",    L"AESC",  L"SVESC",   // 30-35
-                                      L"LINK",   L"NAPC",    L"PFUSE",   L"(",        L")",     L"RONT",    // 36-41
+// static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB",     L"ABERR", L"PVC",     //  0-5
+//                                       L"FUSION", L"NPC",     L"APC",     L"SVPB",     L"VESC",  L"NESC",    //  6-11
+//                                       L"PACE",   L"UNKNOWN", L"NOISE",   L"q",        L"ARFCT", L"Q",       // 12-17
+//                                       L"STCH",   L"TCH",     L"SYSTOLE", L"DIASTOLE", L"NOTE",  L"MEASURE", // 18-23
+//                                       L"P",      L"BBB",     L"PACESP",  L"T",        L"RTM",   L"U",       // 24-29
+//                                       L"LEARN",  L"FLWAV",   L"VFON",    L"VFOFF",    L"AESC",  L"SVESC",   // 30-35
+//                                       L"LINK",   L"NAPC",    L"PFUSE",   L"(",        L")",     L"RONT",    // 36-41
 
-          //user defined beats//
-                                      L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",               // 42-46
-                                      L"r",      L"R",       L"s",       L"S"};                             // 47-50
+//           //user defined beats//
+//                                       L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",               // 42-46
+//                                       L"r",      L"R",       L"s",       L"S"};                             // 47-50
 
                /*
                   [16] - ARFCT

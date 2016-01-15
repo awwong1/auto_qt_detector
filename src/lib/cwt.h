@@ -107,7 +107,7 @@ inline double CWT::CwtTrans(int x, double scale)
         }
         
         ////////////////////boundaries///////////////////////////////////////////////
-        int p = 0;
+        // int p = 0;  // unused
         for (int i = (SignalSize - PrecisionSize); i < (SignalSize - 1) - x; i++) {        // Left edge calculations
                 if (IsPeriodicBoundary) {
                         Re += pReal[i] * pData[(SignalSize-1)-i-x];  //IsPeriodicBoundary
