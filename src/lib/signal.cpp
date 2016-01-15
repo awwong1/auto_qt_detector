@@ -5,9 +5,13 @@
 #include <string.h>
 #include "ishne.h"
 
-Signal::Signal(): pData(0), fp(0), fpmap(0), lpMap(0),
-                  SR(0.0), Bits(0), UmV(0), Lead(0), Length(0),
-                  hh(0), mm(0), ss(0)
+// Signal::Signal(): pData(0), fp(0), fpmap(0), lpMap(0),
+//                   SR(0.0), Bits(0), UmV(0), Lead(0), Length(0),
+//                   hh(0), mm(0), ss(0)
+Signal::Signal(): pData(0), SR(0.0),
+                  Lead(0), UmV(0), Bits(0), Length(0),
+                  hh(0), mm(0), ss(0),
+		  fp(0), fpmap(0), lpMap(0)
 
 {
         wcscpy(EcgFileName, L"");

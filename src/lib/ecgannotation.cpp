@@ -8,8 +8,11 @@
 #include "ecgannotation.h"
 #include <string.h>
 
-EcgAnnotation::EcgAnnotation(PANNHDR p): qrsNum(0), annNum(0), auxNum(0),
-                ANN(0), qrsANN(0), AUX(0)
+// EcgAnnotation::EcgAnnotation(PANNHDR p): qrsNum(0), annNum(0), auxNum(0),
+//                 ANN(0), qrsANN(0), AUX(0)
+EcgAnnotation::EcgAnnotation(PANNHDR p): ANN(0), annNum(0),
+					 qrsANN(0), qrsNum(0),
+					 auxNum(0), AUX(0)
 {
         if (p) {
                 memcpy(&ahdr, p, sizeof(ANNHDR));

@@ -7,9 +7,10 @@
 
 
 FWT::FWT(): tH(0), tG(0), H(0), G(0),
-                thL(0), tgL(0), hL(0), gL(0), thZ(0), tgZ(0), hZ(0), gZ(0),
-                pFwtSpectrum(0), pTmpSpectrum(0),
-                J(0), Jnumbs(0)
+	    thL(0), tgL(0), hL(0), gL(0), thZ(0), tgZ(0), hZ(0), gZ(0),
+	    J(0), Jnumbs(0),
+	    pFwtSpectrum(0), pTmpSpectrum(0)
+	    //J(0), Jnumbs(0)
 {
 }
 
