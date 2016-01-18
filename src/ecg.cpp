@@ -23,13 +23,15 @@ static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB"
                                       L"P",      L"BBB",     L"PACESP",  L"T",        L"RTM",   L"U",       // 24-29
                                       L"LEARN",  L"FLWAV",   L"VFON",    L"VFOFF",    L"AESC",  L"SVESC",   // 30-35
                                       L"LINK",   L"NAPC",    L"PFUSE",   L"(",        L")",     L"RONT",    // 36-41
-
           //user defined beats//
                                       L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",               // 42-46
                                       L"r",      L"R",       L"s",       L"S"};                             // 47-50
-
-//                  [39, 40] - [start Q, end S], i.e. 40 is J point
-//                  46 - ect Ectopic of any origin beat
+// [39, 40] - [start Q, end S], i.e. 40 is J point
+//       46 - ect Ectopic of any origin beat
+// So the whole sequence should look like:
+//   (P  P  P)  (Q   Q  R  S  S)  (T  T  T):
+//   42 24  43  39  15 47 49  40  44 27  45           
+//   alternate QRS: 17 48 50
 
 int main(int argc, char* argv[])  // no unicode args
 {
