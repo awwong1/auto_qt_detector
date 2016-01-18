@@ -12,7 +12,7 @@ wchar_t params[_MAX_PATH] = L"params";
 
 // void tic();
 // void toc();
-void help();
+void help(char*);
 int parse_params(class EcgAnnotation &ann);
 void change_extension(wchar_t* path, const wchar_t* ext);
 
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])  // no unicode args
   wchar_t annName[_MAX_PATH];
   wchar_t hrvName[_MAX_PATH];
 
-  if (argc < 2) { help(); }
+  if (argc < 2) { help(argv[0]); }
   else {
     int leadNumber = 0;
     if (argc >= 2 + 1) {
@@ -151,10 +151,10 @@ int main(int argc, char* argv[])  // no unicode args
   return 0;
 }
 
-void help()
+void help(char* bin_name)
 {
-        wprintf(L"usage: ecg.exe physionetfile.dat [LeadNumber] [params]\n");
-        wprintf(L"       do not forget about \\filters dir to be present.\n");
+  wprintf(L"usage: %s physionetfile.dat [LeadNumber] [params]\n", bin_name );
+  wprintf(L"       do not forget about \\filters dir to be present.\n");
 }
 
 // static LARGE_INTEGER m_nFreq;
