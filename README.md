@@ -13,9 +13,9 @@ ISHNE file support has also been added.
 
 ### How do I run it? ###
 
-A simple Makefile is included which builds `ecg.exe`.  The `filters` directory must always accompany this exe.
+A simple Makefile is included which builds `ecg_ann`.  The `filters` directory must always accompany this binary.
 
-There is an example PhysioNet recording in `data/`.  To annotate the first lead from s0010_re.dat: `ecg.exe s0010_re.dat`.  Or, explicitly specifying the lead: `ecg.exe s0010_re.dat 1`.  Note that PhysioNet .dat files must also include the .hea header file.
+There is an example PhysioNet recording in `data/`.  To annotate the first lead from s0010_re.dat: `./ecg_ann s0010_re.dat`.  Or, explicitly specifying the lead: `./ecg_ann s0010_re.dat 1`.  Note that PhysioNet .dat files must also include the .hea header file.
 
 The output of the ecg.cpp program is the list of annotations and the mean heart rate.  Annotations and heart rate information are also saved to disk as .atr and .hrv files alongside the original recording.
 

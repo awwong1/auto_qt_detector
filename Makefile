@@ -8,5 +8,5 @@ HEADERS=./src/lib/lib.h          ./src/stdafx.h              \
 	./src/lib/ecgdenoise.h   ./src/lib/fwt.h             \
 	./src/lib/ishne.h        ./src/lib/signal.h
 
-ecg.exe	:	$(SOURCES) $(HEADERS) Makefile
+ecg_ann	:	$(SOURCES) $(HEADERS) Makefile
 		g++ $(SOURCES) -o $@
