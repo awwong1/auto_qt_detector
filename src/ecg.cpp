@@ -28,23 +28,8 @@ static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB"
                                       L"(p",     L"p)",      L"(t",      L"t)",       L"ECT",               // 42-46
                                       L"r",      L"R",       L"s",       L"S"};                             // 47-50
 
-               /*
-                  [16] - ARFCT
-                  [15] - q
-                  [17] - Q
-                  [24] - P
-                  [27] - T
-                  [39, 40] - '(' QRS ')'  PQ, J point
-                  42 - (p Pwave onset
-                  43 - p) Pwave offset
-                  44 - (t Twave onset
-                  45 - t) Twave offset
-                  46 - ect Ectopic of any origin beat
-                  47 - r
-                  48 - R
-                  49 - s
-                  50 - S
-                                               */
+//                  [39, 40] - [start Q, end S], i.e. 40 is J point
+//                  46 - ect Ectopic of any origin beat
 
 int main(int argc, char* argv[])  // no unicode args
 {

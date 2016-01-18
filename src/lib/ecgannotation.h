@@ -124,35 +124,6 @@ private:
    sub=61
    chn=62
    aux=63
-
-char anncodes [51][10] =  {"notQRS", "N",       "LBBB",    "RBBB",     "ABERR", "PVC",
-                           "FUSION", "NPC",     "APC",     "SVPB",     "VESC",  "NESC",
-                           "PACE",   "UNKNOWN", "NOISE",   "q",        "ARFCT", "Q",
-                           "STCH",   "TCH",     "SYSTOLE", "DIASTOLE", "NOTE",  "MEASURE",
-                           "P",      "BBB",     "PACESP",  "T",        "RTM",   "U",
-                           "LEARN",  "FLWAV",   "VFON",    "VFOFF",    "AESC",  "SVESC",
-                           "LINK",   "NAPC",    "PFUSE",   "(",        ")",     "RONT",
-
-    //user defined beats//
-                           "(p",     "p)",      "(t",      "t)",       "ECT",
-                           "r",      "R",       "s",       "S"};
-
-                  [16] - ARFCT
-                  [15] - q
-                  [17] - Q
-                  [24] - P
-                  [27] - T
-                  [39, 40] - '(' QRS ')'  PQ, J point
-                  42 - (p Pwave onset
-                  43 - p) Pwave offset
-                  44 - (t Twave onset
-                  45 - t) Twave offset
-                  46 - ect Ectopic of any origin beat
-                  47 - r
-                  48 - R
-                  49 - s
-                  50 - S
-
 */
 
 // Inlines
