@@ -15,6 +15,7 @@ wchar_t params[_MAX_PATH] = L"params";
 void help(char*);
 int parse_params(class EcgAnnotation &ann);
 void change_extension(wchar_t* path, const wchar_t* ext);
+void change_extension(char* path, const char* ext);
 
 static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB",     L"ABERR", L"PVC",     //  0-5
                                       L"FUSION", L"NPC",     L"APC",     L"SVPB",     L"VESC",  L"NESC",    //  6-11
@@ -35,8 +36,11 @@ static wchar_t anncodes [51][10] =  { L"notQRS", L"N",       L"LBBB",    L"RBBB"
 
 int main(int argc, char* argv[])  // no unicode args
 {
-  wchar_t annName[_MAX_PATH];
-  wchar_t hrvName[_MAX_PATH];
+  // These are for if we want to save heart rate and annotations to .hrv and .atr files later:
+  // wchar_t annName[_MAX_PATH];
+  // wchar_t hrvName[_MAX_PATH];
+  // This one is for the csv:
+  char csvName[_MAX_PATH];
 
   if (argc < 2) { help(argv[0]); }
   else {
@@ -44,9 +48,9 @@ int main(int argc, char* argv[])  // no unicode args
     if (argc >= 2 + 1) {
       wchar_t *end;  // NULL
       leadNumber = wcstol( (const wchar_t*)argv[2], &end, 10 ) - 1;
-      if (leadNumber < 0) leadNumber = 0;
+      if (leadNumber < 0) leadNumber = 0;  // TODO: this arg is now ignored.  remove it.
     }
-
+    
     class Signal signal;
     if (signal.ReadFile(argv[1])) {
 
@@ -62,92 +66,107 @@ int main(int argc, char* argv[])  // no unicode args
       wprintf(L"    UmV: %d\n", signal.GetUmV());
       wprintf(L" length: %02d:%02d:%02d.%03d\n\n", h, m, s, ms);
 
-      double* data = signal.GetData(leadNumber);
+      for (int cur_lead = 0; cur_lead < signal.GetLeadsNum(); cur_lead++)  // annotate all leads
+	{
+	  // double* data = signal.GetData(leadNumber);
+	  double* data = signal.GetData(cur_lead);
+	  
+	  class EcgAnnotation ann;  //default annotation params
+	  if (argc >= 3 + 1) {
+	    //wcscpy_s(params, _MAX_PATH, argv[3]);
+	    //wcscpy(params, (const wchar_t*)argv[3] );
+	    mbstowcs( params, argv[3], PATH_MAX );
+	    parse_params(ann);
+	  }
+	  
+	  wprintf(L" working on lead %i.\n", cur_lead+1);
+	  wprintf(L" getting QRS complexes... ");
+	  //tic();
+	  int** qrsAnn = ann.GetQRS(data, size, sr, (wchar_t*)L"filters");         //get QRS complexes
+	  if (qrsAnn) {
+	    wprintf(L" %d beats.\n", ann.GetQrsNumber());
+	    ann.GetEctopics(qrsAnn, ann.GetQrsNumber(), sr);        //label Ectopic beats
+	    
+	    wprintf(L" getting P, T waves... ");
+	    int annNum = 0;
+	    int** ANN = ann.GetPTU(data, size, sr, (wchar_t*)L"filters", qrsAnn, ann.GetQrsNumber());     //find P,T waves
+	    if (ANN) {
+	      annNum = ann.GetEcgAnnotationSize();
+	      wprintf(L" done.\n");
+	      //toc();
+	      wprintf(L"\n");
 
+	      //save ECG annotation (.atr file)
+	      // mbstowcs( annName, argv[1], PATH_MAX );
+	      // change_extension(annName, L".atr");
+	      // ann.SaveAnnotation(annName, ANN, annNum);
+	    }
+	    else {
+	      ANN = qrsAnn;
+	      annNum = 2 * ann.GetQrsNumber();
+	      wprintf(L" failed.\n");
+	      //toc();
+	      wprintf(L"\n");
+	    }
+	    
+	    // save annotations to a CSV file:
+	    strcpy(csvName, argv[1]);
+	    change_extension(csvName, ".csv");
+	    FILE *fp;
+	    if (cur_lead == 0) {
+	      fp = fopen(csvName, "w");  // create new file
+	      fprintf(fp, "%lf\n", sr);  // first line is the sample rate
+	    }
+	    else {
+	      fp = fopen(csvName, "a");  // append to existing file
+	    }
+	    for (int i = 0; i < annNum; i++) {
+	      int smpl = ANN[i][0];
+	      int type = ANN[i][1];
 
-      class EcgAnnotation ann;  //default annotation params
-      if (argc >= 3 + 1) {
-	//wcscpy_s(params, _MAX_PATH, argv[3]);
-	//wcscpy(params, (const wchar_t*)argv[3] );
-	mbstowcs( params, argv[3], PATH_MAX );
-	parse_params(ann);
-      }
-
-
-      wprintf(L" getting QRS complexes... ");
-      //tic();
-      int** qrsAnn = ann.GetQRS(data, size, sr, (wchar_t*)L"filters");         //get QRS complexes
-      if (qrsAnn) {
-	wprintf(L" %d beats.\n", ann.GetQrsNumber());
-	ann.GetEctopics(qrsAnn, ann.GetQrsNumber(), sr);        //label Ectopic beats
-
-	wprintf(L" getting P, T waves... ");
-	int annNum = 0;
-	int** ANN = ann.GetPTU(data, size, sr, (wchar_t*)L"filters", qrsAnn, ann.GetQrsNumber());     //find P,T waves
-	if (ANN) {
-	  annNum = ann.GetEcgAnnotationSize();
-	  wprintf(L" done.\n");
-	  //toc();
-	  wprintf(L"\n");
-	  //save ECG annotation
-	  //wcscpy( annName, (const wchar_t*)argv[1] );
-	  mbstowcs( annName, argv[1], PATH_MAX );
-	  change_extension(annName, L".atr");
-	  ann.SaveAnnotation(annName, ANN, annNum);
+	      // if you want time from start of recording:
+	      //msec = int(((double)smpl / sr) * 1000.0);
+	      //signal.mSecToTime(msec, h, m, s, ms);
+	      //wprintf(L"%10d %02d:%02d:%02d.%03d   %S\n", smpl, h, m, s, ms, anncodes[type]);
+	      
+	      fprintf(fp, "%i,%i,%S\n", cur_lead+1, smpl, anncodes[type]);
+	      // leadNumber is 0-indexed, but we save it to the csv 1-indexed.
+	    }
+	    fclose(fp);
+	    
+	    // saving HR seq:
+	    /*
+	    vector<double> rrs;
+	    vector<int> rrsPos;
+	    
+	    // wcscpy( hrvName, (const wchar_t*)argv[1] );
+	    mbstowcs( hrvName, argv[1], PATH_MAX );
+	    change_extension(hrvName, L".hrv");
+	    if (ann.GetRRseq(ANN, annNum, sr, &rrs, &rrsPos)) {
+	      // Convert name to char* for fopen():
+	      char buffer[PATH_MAX];
+	      wcstombs(buffer, hrvName, sizeof(buffer) );
+	      
+	      // FILE *fp = fopen((const char*)hrvName, "wt");  // no unicode
+	      fp = fopen(buffer, "wt");  // no unicode
+	      for (int i = 0; i < (int)rrs.size(); i++)
+	    	{ fwprintf(fp, L"%lf\n", rrs[i]); }
+	      fclose(fp);
+	      
+	      wprintf(L"\n mean heart rate: %.2lf\n", signal.Mean(&rrs[0], (int)rrs.size()));
+	    }
+	    */
+	  }
+	  else {
+	    wprintf(L" could not get QRS complexes. make sure you have got \"filters\" directory in the ecg application dir.\n\n");
+	    continue;
+	  }
 	}
-	else {
-	  ANN = qrsAnn;
-	  annNum = 2 * ann.GetQrsNumber();
-	  wprintf(L" failed.\n");
-	  //toc();
-	  wprintf(L"\n");
-	}
-
-	//printing out annotation
-	for (int i = 0; i < annNum; i++) {
-	  int smpl = ANN[i][0];
-	  int type = ANN[i][1];
-
-	  msec = int(((double)smpl / sr) * 1000.0);
-	  signal.mSecToTime(msec, h, m, s, ms);
-
-	  wprintf(L"%10d %02d:%02d:%02d.%03d   %S\n", smpl, h, m, s, ms, anncodes[type]);
-	  //wprintf(L"%10d %02d:%02d:%02d.%03d   %i\n", smpl, h, m, s, ms, type);  // debugging
-	}
-
-	//saving RR seq
-	vector<double> rrs;
-	vector<int> rrsPos;
-
-	// wcscpy( hrvName, (const wchar_t*)argv[1] );
-	mbstowcs( hrvName, argv[1], PATH_MAX );
-	change_extension(hrvName, L".hrv");
-	if (ann.GetRRseq(ANN, annNum, sr, &rrs, &rrsPos)) {
-	  // Convert name to char* for fopen():
-	  char buffer[PATH_MAX];
-	  wcstombs(buffer, hrvName, sizeof(buffer) );
-
-	  // FILE *fp = fopen((const char*)hrvName, "wt");  // no unicode
-	  FILE *fp = fopen(buffer, "wt");  // no unicode
-	  for (int i = 0; i < (int)rrs.size(); i++)
-	    fwprintf(fp, L"%lf\n", rrs[i]);
-	  fclose(fp);
-
-	  wprintf(L"\n mean heart rate: %.2lf\n", signal.Mean(&rrs[0], (int)rrs.size()));
-	}
-
-      }
-      else {
-	wprintf(L" could not get QRS complexes. make sure you have got \"filters\" directory in the ecg application dir.");
-	exit(1);
-      }
-
     }
     else {
       wprintf(L" failed to read %s file\n", argv[1]);
       exit(1);
     }
-
   }
 
   return 0;
@@ -180,14 +199,26 @@ void help(char* bin_name)
 
 void change_extension(wchar_t* path, const wchar_t* ext)
 {
-        for (int i = (int)wcslen(path) - 1; i > 0; i--) {
-                if (path[i] == '.') {
-                        path[i] = 0;
-                        wcscat(path, ext);
-                        return;
-                }
-        }
-        wcscat(path, ext);
+  for (int i = (int)wcslen(path) - 1; i > 0; i--) {
+    if (path[i] == '.') {
+      path[i] = 0;
+      wcscat(path, ext);
+      return;
+    }
+  }
+  wcscat(path, ext);
+}
+
+void change_extension(char* path, const char* ext)
+{
+  for (int i = (int)strlen(path) - 1; i > 0; i--) {
+    if (path[i] == '.') {
+      path[i] = 0;
+      strcat(path, ext);
+      return;
+    }
+  }
+  strcat(path, ext);
 }
 
 int parse_params(class EcgAnnotation &ann)
