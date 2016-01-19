@@ -116,6 +116,7 @@ int main(int argc, char* argv[])  // no unicode args
 	    if (cur_lead == 0) {
 	      fp = fopen(csvName, "w");  // create new file
 	      fprintf(fp, "%lf\n", sr);  // first line is the sample rate
+	      // TODO: should probably put some other stuff on first line too, like start time
 	    }
 	    else {
 	      fp = fopen(csvName, "a");  // append to existing file
