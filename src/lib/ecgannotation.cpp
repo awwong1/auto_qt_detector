@@ -29,7 +29,7 @@ EcgAnnotation::EcgAnnotation(PANNHDR p): ANN(0), annNum(0),
                 ahdr.minQT = 0.21;      //min QT duration
                 ahdr.maxQT = 0.70;      //max QT duration (default was 0.48)
                 ahdr.pFreq = 9.0;       //cwt Hz for P wave
-                ahdr.tFreq = 3.0;       //cwt Hz for T wave
+                ahdr.tFreq = 3.0;       //cwt Hz for T wave (TODO?: adjust this)
                 ahdr.biTwave = NORMAL;  //normal wave                
         }
 }
