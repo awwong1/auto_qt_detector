@@ -39,7 +39,7 @@ extern "C" {
 #define MS_INVALIDATE   4
 
 
-void*   mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off);
+void*   mmap(void *addr, size_t len, int prot, int flags, int fildes, off64_t off);
 int     munmap(void *addr, size_t len);
 int     mprotect(void *addr, size_t len, int prot);
 int     msync(void *addr, size_t len, int flags);
