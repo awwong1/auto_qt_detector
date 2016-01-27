@@ -35,7 +35,7 @@ typedef void *PVOID;
 typedef PVOID HANDLE;
 
 #ifndef _WIN32
-  #define PATH_MAX _MAX_PATH
+  #define _MAX_PATH PATH_MAX
 #endif
 
 // Stuff from Windows headers:

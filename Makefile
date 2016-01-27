@@ -17,4 +17,4 @@ else
 endif
 
 $(BIN_NAME)	:	$(SOURCES) $(HEADERS) Makefile
-				g++ $(SOURCES) -o $@
+			g++ -Wall $(SOURCES) -o $@
