@@ -350,7 +350,7 @@ bool Signal::ReadMitbihFile()
     if (fp == NULL) { return false; }
     
     // Find file size:
-    long file_size;
+    unsigned long file_size;
     fseek(fp, 0, SEEK_END);
     file_size = ftell(fp);
     rewind(fp);
