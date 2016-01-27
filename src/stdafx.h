@@ -13,7 +13,11 @@
 // #define STDC_WANT_LIB_EXT1 1
 
 // TODO: reference additional headers your program requires here
-#include "./mman/mman.h"
+#ifdef _WIN32
+  #include "./mman/mman.h"
+#else
+  #include <sys/mman.h>
+#endif
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
@@ -30,7 +34,9 @@ typedef void *LPVOID;
 typedef void *PVOID;
 typedef PVOID HANDLE;
 
-//#define PATH_MAX _MAX_PATH
+#ifndef _WIN32
+  #define PATH_MAX _MAX_PATH
+#endif
 
 // Stuff from Windows headers:
 typedef unsigned long       DWORD;
