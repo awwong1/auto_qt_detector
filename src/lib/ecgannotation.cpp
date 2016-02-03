@@ -42,7 +42,7 @@ EcgAnnotation::~EcgAnnotation()
                 delete[] ANN;
         }
         if (qrsANN) {
-                for (int i = 0; i < qrsNum;  i++)
+                for (int i = 0; i < 2*qrsNum;  i++)
                         delete[] qrsANN[i];
                 delete[] qrsANN;
         }
@@ -173,7 +173,7 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
       qrsANN = new int*[2*qrsNum];                    // [samps] [type] [?aux data]
       for (int i = 0; i < 2*qrsNum; i++)
 	{
-	  qrsANN[i] = new int[3];  // TODO: delete[] somewhere (probably in ecg.cpp when done)
+	  qrsANN[i] = new int[3];
 	}
       
       for (int i = 0; i < 2*qrsNum; i++) {
