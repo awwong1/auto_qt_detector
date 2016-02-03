@@ -94,8 +94,8 @@ int** EcgAnnotation::GetQRS(const double *data, int size, double sr, wchar_t *fl
   vector <int> QRS;    //clean QRS detected
   int add = 0;
   
-  while (pdata[add]) add += int(0.1 * sr);                  //skip QRS in begining
-  while (pdata[add] == 0) add++;                            //get  1st QRS
+  while ( (pdata[add])      && (add < size) ) { add += int(0.1 * sr); }  //skip QRS in begining
+  while ( (pdata[add] == 0) && (add < size) ) { add++; }                 //get  1st QRS
   
   QRS.push_back(add - 1);
   /////////////////////////////////////////////////////////////////////////////
