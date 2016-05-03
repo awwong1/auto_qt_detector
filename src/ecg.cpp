@@ -66,6 +66,19 @@ int main(int argc, char* argv[])  // no unicode args
       wprintf(L"    UmV: %d\n", signal.GetUmV());
       wprintf(L" length: %02d:%02d:%02d.%03d\n\n", h, m, s, ms);
 
+      // Find filters directory; assuming it's alongside executable (Linux only!):
+      wchar_t filt_path[PATH_MAX];
+#ifdef __linux__
+      char filt_dir[PATH_MAX];
+      readlink("/proc/self/exe", filt_dir, PATH_MAX);  // get binary path
+      char* slash_loc = strrchr(filt_dir, '/');
+      memcpy(slash_loc, "/filters\0", 9);  // filt_dir now contains full path of filters dir
+      mbstowcs(filt_path, filt_dir, PATH_MAX);
+#else
+      // TODO: make versions for other OSes.  for now we just assume it's in current directory.
+      mbstowcs(filt_path, "./filters\0", 10);
+#endif
+
       for (int cur_lead = 0; cur_lead < signal.GetLeadsNum(); cur_lead++)  // annotate all leads
 	{
 	  // double* data = signal.GetData(leadNumber);
@@ -82,14 +95,14 @@ int main(int argc, char* argv[])  // no unicode args
 	  wprintf(L" working on lead %i.\n", cur_lead+1);
 	  wprintf(L" getting QRS complexes... ");
 	  //tic();
-	  int** qrsAnn = ann.GetQRS(data, size, sr, (wchar_t*)L"filters");         //get QRS complexes
+	  int** qrsAnn = ann.GetQRS(data, size, sr, filt_path);         //get QRS complexes
 	  if (qrsAnn) {
 	    wprintf(L" %d beats.\n", ann.GetQrsNumber());
 	    ann.GetEctopics(qrsAnn, ann.GetQrsNumber(), sr);        //label Ectopic beats
 	    
 	    wprintf(L" getting P, T waves... ");
 	    int annNum = 0;
-	    int** ANN = ann.GetPTU(data, size, sr, (wchar_t*)L"filters", qrsAnn, ann.GetQrsNumber());     //find P,T waves
+	    int** ANN = ann.GetPTU(data, size, sr, filt_path, qrsAnn, ann.GetQrsNumber());     //find P,T waves
 	    if (ANN) {
 	      annNum = ann.GetEcgAnnotationSize();
 	      wprintf(L" done.\n");
