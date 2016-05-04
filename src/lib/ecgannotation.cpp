@@ -901,11 +901,12 @@ bool EcgAnnotation::SaveAnnotation(const wchar_t *name, int **ann, int nums)
   return true;
 }
 
-bool EcgAnnotation::SaveQTseq(const wchar_t *name, int **ann, int annsize, double sr, int length)
+bool EcgAnnotation::GetQTseq(int **ann, int annsize, double sr, vector<double> *QT, vector<int> *QTpos) const
 {
-        vector <double> QT;
         int q = 0, t = 0;
-
+	
+        QT->clear();
+        QTpos->clear();
 
         for (int i = 0; i < annsize; i++) {
                 switch (ann[i][1]) {
@@ -945,8 +946,10 @@ bool EcgAnnotation::SaveQTseq(const wchar_t *name, int **ann, int annsize, doubl
 
                 if (ann[i][1] == 45) { //45 - t)
                         t = ann[i][0];
-                        if (q < t)
-                                QT.push_back((double)(t - q) / sr);
+                        if (q < t) {
+                                QT->push_back((double)(t - q) / sr);
+                                QTpos->push_back(t);
+			}
                 } else {
                         /*if(i+1<annsize && (ann[i+1][1]==47 || ann[i+1][1]==48))  //r only
                          q = ann[i+1][0];
@@ -957,19 +960,7 @@ bool EcgAnnotation::SaveQTseq(const wchar_t *name, int **ann, int annsize, doubl
                 }
         }
 
-
-        if (QT.size()) {
-                DATAHDR hdr;
-                memset(&hdr, 0, sizeof(DATAHDR));
-
-                memcpy(hdr.hdr, "DATA", 4);
-                hdr.size = QT.size();
-                hdr.sr = float((double)QT.size() / ((double)length / sr));
-                hdr.bits = 32;
-                hdr.umv = 1;
-
-                SaveFile(name, &QT[0], &hdr);
-
+        if (QT->size()) {
                 return true;
         } else
                 return false;
@@ -1183,8 +1174,8 @@ bool EcgAnnotation::GetRRseq(int **ann, int nums, double sr, vector<double> *RR,
 
                         rr = 60.0 / ((r2 - r1) / sr);
                         if (rr >= ahdr.minbpm && rr <= ahdr.maxbpm) {
-                                RR->push_back(rr);         //in bpm
-                                RRpos->push_back(r1);
+                                RR->push_back(rr);         // in bpm
+                                RRpos->push_back(r1);      // TODO?: r2 instead
                         }
                 }
                 add = i;

@@ -54,7 +54,7 @@ public:
         bool GetRRseq(int **ann, int nums, double sr, vector<double> *RR, vector<int> *RRpos) const;
         bool SaveRRseq(wchar_t *name, int **ann, int nums, double sr, int length);
         bool SaveRRnseq(wchar_t *name, int **ann, int nums, double sr, int length);
-        bool SaveQTseq(const wchar_t *name, int **ann, int annsize, double sr, int length);
+        bool GetQTseq(int **ann, int annsize, double sr, vector<double> *QT, vector<int> *QTpos) const;
         bool SavePQseq(const wchar_t *name, int **ann, int annsize, double sr, int length);
         bool SavePPseq(const wchar_t *name, int **ann, int annsize, double sr, int length);
 
